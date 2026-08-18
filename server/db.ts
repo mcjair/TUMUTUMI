@@ -22,7 +22,8 @@ const DB_FILE = path.join(process.cwd(), 'db.json');
 const initialData: Schema = {
   users: [
     { id: 'usr-1', email: 'admin@tumisoft.com', name: 'Administrador Principal', role: 'admin' },
-    { id: 'usr-2', email: 'operador@tumisoft.com', name: 'Operador de Sede', role: 'operador' }
+    { id: 'usr-2', email: 'operador@tumisoft.com', name: 'Operador de Sede', role: 'operador' },
+    { id: 'usr-3', email: 'pmagallanesp@gmail.com', name: 'Administrador General', role: 'admin' }
   ],
   sedes: [
     {
