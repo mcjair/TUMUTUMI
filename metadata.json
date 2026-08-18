@@ -1,0 +1,6 @@
+{
+  "name": "Tumisoft Sync Web",
+  "description": "Sistema de sincronización bidireccional entre Google Sheets y Tumisoft ERP, con validación previa de cambios, cola de trabajos asíncrona y auditoría en tiempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
