@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sede, Producto } from '../types';
-import { Search, Database, RefreshCw, Eye, Globe, ArrowDownWideNarrow } from 'lucide-react';
+import { Search, Database, RefreshCw, Eye, Globe, Plus, CheckCircle, AlertCircle, X } from 'lucide-react';
 
 interface CatalogoMaestroProps {
   activeSede: Sede | null;
@@ -20,6 +20,19 @@ export default function CatalogoMaestro({ activeSede, userEmail, onJobCreated }:
   const [categoryFilter, setCategoryFilter] = useState('TODAS');
   const [syncingMaestro, setSyncingMaestro] = useState(false);
   const [scrapingMaestro, setScrapingMaestro] = useState(false);
+
+  // New product modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSku, setNewSku] = useState('');
+  const [newBarcode, setNewBarcode] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newCategory, setNewCategory] = useState('CONFITERIA');
+  const [newPrice, setNewPrice] = useState('');
+  const [newCost, setNewCost] = useState('');
+  const [newStock, setNewStock] = useState('10');
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const fetchCatalog = async () => {
     if (!activeSede) return;
@@ -38,6 +51,58 @@ export default function CatalogoMaestro({ activeSede, userEmail, onJobCreated }:
   useEffect(() => {
     fetchCatalog();
   }, [activeSede]);
+
+  // Handle Add Product
+  const handleSaveNewProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeSede) return;
+
+    setSaveError(null);
+    setSaveSuccess(null);
+    setSavingProduct(true);
+
+    try {
+      const response = await fetch(`/api/sedes/${activeSede.id}/productos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku: newSku,
+          barcode: newBarcode,
+          nombre: newName,
+          categoria: newCategory,
+          precioVenta: newPrice,
+          costo: newCost,
+          stock: newStock,
+          userEmail
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al guardar el producto');
+      }
+
+      setSaveSuccess(`¡Producto ${data.product.sku} (${data.product.nombre}) registrado y sincronizado exitosamente con Tumisoft ERP!`);
+      // Reset form
+      setNewSku('');
+      setNewBarcode('');
+      setNewName('');
+      setNewPrice('');
+      setNewCost('');
+      setNewStock('10');
+      // Refresh list
+      fetchCatalog();
+
+      setTimeout(() => {
+        setSaveSuccess(null);
+        setShowAddModal(false);
+      }, 1500);
+    } catch (err: any) {
+      setSaveError(err.message || 'Error al conectar con Tumisoft ERP');
+    } finally {
+      setSavingProduct(false);
+    }
+  };
 
   // Sync Master catalog
   const handleSyncMaster = async () => {
@@ -121,6 +186,15 @@ export default function CatalogoMaestro({ activeSede, userEmail, onJobCreated }:
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+            id="nuevo-producto-btn"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nuevo Producto
+          </button>
+
           <button
             onClick={handleSyncMaster}
             disabled={syncingMaestro || catalog.length === 0}
@@ -240,6 +314,179 @@ export default function CatalogoMaestro({ activeSede, userEmail, onJobCreated }:
           Sincronizado en tiempo real con Tumisoft ERP
         </div>
       </div>
+
+      {/* New Product Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide">
+                    Registrar Nuevo Producto en Tumisoft
+                  </h3>
+                  <p className="text-[10px] text-slate-500">
+                    Sede: <strong className="text-slate-700">{activeSede?.name}</strong> (RUC: {activeSede?.ruc})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewProduct} className="p-5 space-y-3.5">
+              {saveSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{saveSuccess}</span>
+                </div>
+              )}
+
+              {saveError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{saveError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Código SKU *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newSku}
+                    onChange={(e) => setNewSku(e.target.value)}
+                    placeholder="Ej. TUMI-205 o PROD-01"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Código de Barras
+                  </label>
+                  <input
+                    type="text"
+                    value={newBarcode}
+                    onChange={(e) => setNewBarcode(e.target.value)}
+                    placeholder="Ej. 775012340205"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                  Nombre Comercial / Descripción *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ej. Chocolate Sublime 30g x 24"
+                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Categoría
+                  </label>
+                  <input
+                    type="text"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="Ej. CONFITERIA"
+                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Stock Inicial
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newStock}
+                    onChange={(e) => setNewStock(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Costo Adquisición (S/)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newCost}
+                    onChange={(e) => setNewCost(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Precio Venta (S/) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={newPrice}
+                    onChange={(e) => setNewPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 focus:outline-none text-emerald-700"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-3 py-1.5 border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs rounded font-medium cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProduct}
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  {savingProduct ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Sincronizando con Tumisoft...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Guardar y Sincronizar en Tumisoft
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

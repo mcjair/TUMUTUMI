@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Sede, Job } from './types';
+import { User, Sede, Job, AppTheme } from './types';
 import SedeSelector from './components/SedeSelector';
 import IngresoDia from './components/IngresoDia';
 import ActualizacionMasiva, { UpdateType } from './components/ActualizacionMasiva';
@@ -13,6 +13,8 @@ import CatalogoMaestro from './components/CatalogoMaestro';
 import AuditLogView from './components/AuditLogView';
 import SettingsPanel from './components/SettingsPanel';
 import AppsScriptModal from './components/AppsScriptModal';
+import ThemeSelectorModal from './components/ThemeSelectorModal';
+import { THEMES, getSavedTheme, saveTheme } from './lib/theme';
 import { googleSignIn, googleLogout, initAuth } from './lib/googleAuth';
 import { User as FirebaseUser } from 'firebase/auth';
 import {
@@ -33,7 +35,10 @@ import {
   XCircle,
   RotateCw,
   ChevronDown,
-  Code
+  Code,
+  Palette,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 
 type TabType = 'ingreso' | 'masivo' | 'entrada' | 'catalogo' | 'jobs' | 'auditoria' | 'settings';
@@ -45,6 +50,10 @@ export default function App() {
   const [emailInput, setEmailInput] = useState('admin@tumisoft.com');
   const [passwordInput, setPasswordInput] = useState('admin123');
   const [loginError, setLoginError] = useState('');
+
+  // Theme state
+  const [currentTheme, setCurrentTheme] = useState<AppTheme>(getSavedTheme());
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   // Google OAuth state
   const [googleUser, setGoogleUser] = useState<FirebaseUser | null>(null);
@@ -59,6 +68,13 @@ export default function App() {
   const [loadingSedes, setLoadingSedes] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);
+
+  const themeConfig = THEMES[currentTheme] || THEMES.emerald;
+
+  const handleSelectTheme = (theme: AppTheme) => {
+    setCurrentTheme(theme);
+    saveTheme(theme);
+  };
 
   useEffect(() => {
     // Listen for Google Auth state
@@ -133,7 +149,7 @@ export default function App() {
     if (isAuthenticated) {
       fetchSedes();
       fetchJobs();
-      // Poll jobs status every 2.5 seconds to provide ultra-responsive logs progress updating
+      // Poll jobs status every 2.5 seconds to provide responsive logs progress updating
       const interval = setInterval(fetchJobs, 2500);
       return () => clearInterval(interval);
     }
@@ -180,7 +196,7 @@ export default function App() {
       console.warn('Network login fallback to client session:', err);
     }
 
-    // Client-side instant fallback for test credentials or any provided input
+    // Client-side fallback for test credentials
     const fallbackRole = cleanEmail.includes('operador') ? 'operador' : 'admin';
     const fallbackUser: User = {
       id: 'usr-' + Date.now(),
@@ -211,7 +227,7 @@ export default function App() {
 
   // Factory reset database
   const handleResetApp = async () => {
-    if (confirm('¿Está absolutamente seguro de restaurar toda la base de datos de simulación al estado inicial de semilla? Perderá todos los trabajos y auditorías cargados.')) {
+    if (confirm('¿Está seguro de restaurar toda la base de datos de simulación al estado inicial?')) {
       try {
         await fetch('/api/admin/clear', { method: 'POST' });
         await fetchSedes();
@@ -225,31 +241,32 @@ export default function App() {
   };
 
   const handleJobCreated = (jobId: string) => {
-    // Switch to jobs queue tab to let the user see progress bar and logs running in real-time
     setActiveTab('jobs');
     fetchJobs();
   };
 
-  // Check if there are active processing/pending jobs to render a header alert badge
   const activeJobsCount = jobs.filter(j => j.status === 'PENDING' || j.status === 'PROCESSING').length;
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" id="login-layout">
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-8 space-y-6">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden" id="login-layout">
+        {/* Subtle geometric backdrop */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-950 to-slate-950 opacity-90"></div>
+        
+        <div className="relative z-10 bg-white border border-slate-200/80 rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+            <div className="inline-flex p-3 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 shadow-xs">
               <Building2 className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">Tumisoft Sync Web</h1>
-            <p className="text-sm text-slate-400">
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Tumisoft Sync Web</h1>
+            <p className="text-xs text-slate-500">
               Sincronizador e integrador de catálogo de Google Sheets a Tumisoft ERP.
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4" id="login-form">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
                 Correo Electrónico
               </label>
               <input
@@ -257,13 +274,13 @@ export default function App() {
                 required
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
+                className="w-full px-4 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs transition-all"
                 placeholder="admin@tumisoft.com"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
                 Contraseña
               </label>
               <input
@@ -271,7 +288,7 @@ export default function App() {
                 required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
+                className="w-full px-4 py-2.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -285,31 +302,31 @@ export default function App() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-slate-800 hover:bg-slate-950 text-white font-semibold rounded-xl text-sm transition-colors shadow-md cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors shadow-md cursor-pointer flex items-center justify-center gap-2"
             >
-              <UserCheck className="w-4 h-4" />
+              <UserCheck className="w-4 h-4 text-emerald-400" />
               <span>Iniciar Sesión</span>
             </button>
           </form>
 
           {/* 1-Click Fast Login Options */}
-          <div className="space-y-2 pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block text-center">
+          <div className="space-y-2 pt-3 border-t border-slate-100">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center">
               Acceso Rápido Directo (1 Clic)
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin')}
-                className="p-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs flex flex-col items-center justify-center transition-colors cursor-pointer"
+                className="p-2.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-800 rounded-xl font-bold text-xs flex flex-col items-center justify-center transition-colors cursor-pointer"
               >
                 <span>Administrador</span>
-                <span className="text-[10px] text-indigo-500 font-normal">admin@tumisoft.com</span>
+                <span className="text-[10px] text-slate-500 font-normal">admin@tumisoft.com</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('operador')}
-                className="p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex flex-col items-center justify-center transition-colors cursor-pointer"
+                className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex flex-col items-center justify-center transition-colors cursor-pointer"
               >
                 <span>Operador Sede</span>
                 <span className="text-[10px] text-slate-500 font-normal">operador@tumisoft.com</span>
@@ -318,7 +335,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => handleQuickLogin('user')}
-              className="w-full p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
               <span>Ingresar como Administrador (pmagallanesp@gmail.com)</span>
@@ -330,67 +347,81 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#f1f5f9] font-sans text-[13px] overflow-hidden" id="app-layout">
+    <div className={`flex h-screen w-full font-sans text-[13px] overflow-hidden ${themeConfig.appBg}`} id="app-layout">
       {/* High Density Left Navigation Sidebar */}
-      <nav className="w-56 bg-[#0f172a] text-slate-300 flex flex-col border-r border-slate-800 shrink-0">
-        <div className="p-4 border-b border-slate-800 flex items-center gap-2">
-          <div className="w-6 h-6 bg-indigo-500 rounded-sm flex items-center justify-center font-bold text-white text-xs">
-            TS
+      <nav className={`w-56 ${themeConfig.sidebarBg} text-slate-300 flex flex-col border-r ${themeConfig.sidebarBorder} shrink-0`}>
+        <div className={`p-3.5 border-b ${themeConfig.sidebarBorder} flex items-center justify-between`}>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-white text-xs shadow-xs"
+              style={{ backgroundColor: themeConfig.colorHex }}
+            >
+              TS
+            </div>
+            <span className="font-bold text-white tracking-tight uppercase text-xs">Tumisoft Sync</span>
           </div>
-          <span className="font-semibold text-white tracking-tight uppercase">Tumisoft Sync</span>
+
+          <button
+            type="button"
+            onClick={() => setShowThemeModal(true)}
+            className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            title="Cambiar Diseño / Tema"
+          >
+            <Palette className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         <div className="flex-1 py-3 px-2 space-y-1 overflow-y-auto" id="sidebar-navigation">
           <div className="px-2.5 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-            📦 Menú Tumisoft Sync
+            📦 Menú Principal
           </div>
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'settings'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>🏪</span>
             <span className="truncate">Seleccionar Sede</span>
           </button>
 
-          <div className="border-t border-slate-800/60 my-1"></div>
+          <div className="border-t border-white/10 my-1"></div>
 
           <button
             onClick={() => setActiveTab('ingreso')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'ingreso'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>▶️</span>
             <span className="truncate">Procesar Ingreso del Día</span>
           </button>
 
-          <div className="border-t border-slate-800/60 my-1"></div>
+          <div className="border-t border-white/10 my-1"></div>
 
           <button
             onClick={() => { setActiveTab('masivo'); setUpdateSubtype('PRECIO'); }}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'masivo' && updateSubtype === 'PRECIO'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>💰</span>
-            <span className="truncate">Actualizar Precio de Venta</span>
+            <span className="truncate">Actualizar Precio Venta</span>
           </button>
 
           <button
             onClick={() => { setActiveTab('masivo'); setUpdateSubtype('CATEGORIA'); }}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'masivo' && updateSubtype === 'CATEGORIA'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>🏷️</span>
@@ -399,10 +430,10 @@ export default function App() {
 
           <button
             onClick={() => { setActiveTab('masivo'); setUpdateSubtype('NOMBRE'); }}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'masivo' && updateSubtype === 'NOMBRE'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>📝</span>
@@ -411,10 +442,10 @@ export default function App() {
 
           <button
             onClick={() => { setActiveTab('masivo'); setUpdateSubtype('COSTO'); }}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'masivo' && updateSubtype === 'COSTO'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>💵</span>
@@ -423,10 +454,10 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('entrada')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'entrada'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span>📦</span>
@@ -439,26 +470,26 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('catalogo')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'catalogo'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
-            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'catalogo' ? 'bg-indigo-400' : 'bg-transparent'}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'catalogo' ? 'bg-emerald-400' : 'bg-transparent'}`}></div>
             <span>Catálogo Maestro</span>
           </button>
 
           <button
             onClick={() => setActiveTab('jobs')}
-            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'jobs'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
             <span className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'jobs' ? 'bg-indigo-400' : 'bg-transparent'}`}></div>
+              <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'jobs' ? 'bg-emerald-400' : 'bg-transparent'}`}></div>
               <span>Cola de Trabajos</span>
             </span>
             {activeJobsCount > 0 && (
@@ -470,35 +501,31 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('auditoria')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs ${
               activeTab === 'auditoria'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                ? 'bg-white/15 text-white font-bold shadow-2xs'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
-            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'auditoria' ? 'bg-indigo-400' : 'bg-transparent'}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'auditoria' ? 'bg-emerald-400' : 'bg-transparent'}`}></div>
             <span>Auditoría & Logs</span>
           </button>
 
           <div className="pt-3 px-2.5 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-            Integraciones
+            Herramientas
           </div>
 
           <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs ${
-              activeTab === 'settings'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
-            }`}
+            onClick={() => setShowThemeModal(true)}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs text-slate-300 hover:bg-white/5 hover:text-white"
           >
-            <div className={`w-1.5 h-1.5 rounded-full ${activeTab === 'settings' ? 'bg-indigo-400' : 'bg-transparent'}`}></div>
-            <span>Ajustes de Sede (Drive/Tumi)</span>
+            <Palette className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Diseño ({themeConfig.name.split(' ')[0]})</span>
           </button>
 
           <button
             onClick={() => setShowAppsScriptModal(true)}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded transition-colors text-left text-xs text-emerald-400 hover:bg-slate-800/50 hover:text-emerald-300 font-medium"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors text-left text-xs text-emerald-400 hover:bg-white/5 hover:text-emerald-300 font-medium"
           >
             <Code className="w-3.5 h-3.5" />
             <span>Código Google Sheets</span>
@@ -507,21 +534,21 @@ export default function App() {
 
         {/* Live Telemetry Sidebar Panel widget */}
         {jobs.length > 0 && (
-          <div className="p-4 border-t border-slate-800 bg-slate-950/40 text-xs space-y-3 shrink-0">
-            <div className="flex justify-between text-[11px] text-slate-500 font-bold uppercase">
-              <span>Saturación de Cola</span>
-              <span className={activeJobsCount > 0 ? "text-amber-500 font-bold" : "text-emerald-500 font-bold"}>
-                {activeJobsCount > 0 ? "Activa" : "Libre"}
+          <div className={`p-3.5 border-t ${themeConfig.sidebarBorder} bg-black/20 text-xs space-y-2.5 shrink-0`}>
+            <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <span>Sincronización</span>
+              <span className={activeJobsCount > 0 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                {activeJobsCount > 0 ? "En Proceso" : "Al Día"}
               </span>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex justify-between text-[10px] text-slate-400">
                 <span>Último Trabajo</span>
-                <span className="font-mono text-slate-500">#{jobs[0].id.substring(4, 8)}</span>
+                <span className="font-mono text-slate-300">#{jobs[0].id.substring(4, 8)}</span>
               </div>
-              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 ${jobs[0].status === 'PROCESSING' ? 'bg-indigo-500 animate-pulse' : jobs[0].status === 'COMPLETED' ? 'bg-emerald-500' : jobs[0].status === 'ERROR' ? 'bg-rose-500' : 'bg-slate-600'}`}
+                  className={`h-full transition-all duration-500 ${jobs[0].status === 'PROCESSING' ? 'bg-amber-400 animate-pulse' : jobs[0].status === 'COMPLETED' ? 'bg-emerald-400' : jobs[0].status === 'ERROR' ? 'bg-rose-500' : 'bg-slate-500'}`}
                   style={{ width: jobs[0].status === 'PROCESSING' ? `${Math.max(15, (jobs[0].processedRows / jobs[0].totalRows) * 100)}%` : '100%' }}
                 ></div>
               </div>
@@ -529,21 +556,22 @@ export default function App() {
           </div>
         )}
 
-        <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500 shrink-0">
-          v1.2.4-stable
+        <div className={`p-3 border-t ${themeConfig.sidebarBorder} text-[10px] text-slate-500 flex items-center justify-between shrink-0`}>
+          <span>v1.2.5-stable</span>
+          <span className="font-mono">{themeConfig.badge}</span>
         </div>
       </nav>
 
       {/* Main Workspace Frame */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* High Density Top Control Header */}
-        <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-20">
+        <header className={`h-12 ${themeConfig.headerBg} border-b ${themeConfig.headerBorder} flex items-center justify-between px-6 shrink-0 z-20 transition-colors shadow-2xs`}>
           <div className="flex items-center gap-3">
             {/* Native Google Sheets-style Menu Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowMenuDropdown(!showMenuDropdown)}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 rounded font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 rounded-lg font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                 id="tumisoft-sync-dropdown-btn"
               >
                 <span>📦</span>
@@ -557,7 +585,7 @@ export default function App() {
                     className="fixed inset-0 z-40"
                     onClick={() => setShowMenuDropdown(false)}
                   ></div>
-                  <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded shadow-lg py-1 z-50 text-xs animate-in fade-in slide-in-from-top-1">
+                  <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs animate-in fade-in slide-in-from-top-1">
                     <button
                       onClick={() => { setActiveTab('settings'); setShowMenuDropdown(false); }}
                       className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer font-medium"
@@ -565,7 +593,7 @@ export default function App() {
                       <span>🏪</span>
                       <span>Seleccionar Sede</span>
                     </button>
-                    <div className="border-t border-slate-150 my-1"></div>
+                    <div className="border-t border-slate-100 my-1"></div>
                     <button
                       onClick={() => { setActiveTab('ingreso'); setShowMenuDropdown(false); }}
                       className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer font-medium"
@@ -573,7 +601,7 @@ export default function App() {
                       <span>▶️</span>
                       <span>Procesar Ingreso del Día</span>
                     </button>
-                    <div className="border-t border-slate-150 my-1"></div>
+                    <div className="border-t border-slate-100 my-1"></div>
                     <button
                       onClick={() => { setActiveTab('masivo'); setUpdateSubtype('PRECIO'); setShowMenuDropdown(false); }}
                       className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer font-medium"
@@ -602,7 +630,7 @@ export default function App() {
                       <span>💵</span>
                       <span>Actualizar Precio Costo (Revalorización)</span>
                     </button>
-                    <div className="border-t border-slate-150 my-1"></div>
+                    <div className="border-t border-slate-100 my-1"></div>
                     <button
                       onClick={() => { setActiveTab('entrada'); setShowMenuDropdown(false); }}
                       className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer font-medium"
@@ -619,10 +647,20 @@ export default function App() {
             <span className="text-slate-600 text-xs font-medium">Panel Web & Google Sheets Sync</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Theme Switcher Quick Button */}
+            <button
+              onClick={() => setShowThemeModal(true)}
+              className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-[11px] font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+              title="Cambiar tema visual"
+            >
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: themeConfig.colorHex }}></div>
+              <span>Diseño: {themeConfig.name.split(' ')[0]}</span>
+            </button>
+
             <button
               onClick={() => setShowAppsScriptModal(true)}
-              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded font-semibold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Code className="w-3.5 h-3.5 text-emerald-600" />
               <span>Instalar en Google Sheets</span>
@@ -637,14 +675,14 @@ export default function App() {
 
             <div className="h-4 w-[1px] bg-slate-200"></div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <div className="text-right">
-                <div className="font-semibold text-slate-900 text-xs leading-none">{user?.name}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5 font-medium uppercase">{user?.role} de Sede</div>
+                <div className="font-bold text-slate-900 text-xs leading-none">{user?.name}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5 font-semibold uppercase">{user?.role} de Sede</div>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Cerrar Sesión"
                 id="logout-btn"
               >
@@ -655,7 +693,7 @@ export default function App() {
         </header>
 
         {/* Dashboard Workspace Scroller */}
-        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+        <div className="flex-1 p-5 sm:p-6 space-y-5 overflow-y-auto">
           {/* Active Sede Selector always on top */}
           <SedeSelector
             sedes={sedes}
@@ -675,6 +713,8 @@ export default function App() {
               userEmail={user?.email || 'admin@tumisoft.com'}
               onJobCreated={handleJobCreated}
               googleToken={googleToken}
+              onGoogleSignIn={handleGoogleSignIn}
+              onSedeUpdated={fetchSedes}
             />
           )}
 
@@ -706,11 +746,11 @@ export default function App() {
 
           {activeTab === 'jobs' && (
             <div className="space-y-4" id="job-queue-view">
-              <div className="bg-white border border-slate-200 rounded p-4 shadow-sm">
-                <div className="border-b border-slate-200 pb-3 mb-4 flex justify-between items-center bg-slate-50/50 -mx-4 -mt-4 p-4">
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <div className="border-b border-slate-200 pb-3 mb-4 flex justify-between items-center bg-slate-50/70 -mx-5 -mt-5 p-4 rounded-t-xl">
                   <div>
                     <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                      <Terminal className="w-4 h-4 text-indigo-500" />
+                      <Terminal className="w-4 h-4 text-emerald-600" />
                       Cola de Trabajos Asíncronos
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
@@ -728,7 +768,7 @@ export default function App() {
                     {jobs.map((job) => {
                       const percent = job.totalRows > 0 ? Math.round((job.processedRows / job.totalRows) * 100) : 0;
                       return (
-                        <div key={job.id} className="border border-slate-200 rounded p-4 bg-white space-y-3 shadow-xs">
+                        <div key={job.id} className="border border-slate-200 rounded-xl p-4 bg-white space-y-3 shadow-xs">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
                             <div>
                               <div className="flex items-center gap-2">
@@ -773,7 +813,7 @@ export default function App() {
                             <div className="w-full bg-slate-100 border border-slate-200 rounded-full h-1.5 overflow-hidden">
                               <div
                                 className={`h-full transition-all duration-500 ${
-                                  job.status === 'ERROR' ? 'bg-rose-500' : job.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-indigo-600'
+                                  job.status === 'ERROR' ? 'bg-rose-500' : job.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-emerald-600'
                                 }`}
                                 style={{ width: `${percent}%` }}
                               ></div>
@@ -781,7 +821,7 @@ export default function App() {
                           </div>
 
                           {/* Terminal logs */}
-                          <div className="bg-slate-900 text-slate-300 font-mono text-[10px] p-3 rounded border border-slate-800 space-y-1 max-h-36 overflow-y-auto">
+                          <div className="bg-slate-900 text-slate-300 font-mono text-[10px] p-3 rounded-lg border border-slate-800 space-y-1 max-h-36 overflow-y-auto">
                             {job.logs.map((log, index) => (
                               <div key={index} className="flex gap-1.5">
                                 <span className="text-slate-500 select-none">[{index + 1}]</span>
@@ -808,6 +848,8 @@ export default function App() {
               onResetApp={handleResetApp}
               googleToken={googleToken}
               onGoogleSignIn={handleGoogleSignIn}
+              currentTheme={currentTheme}
+              onSelectTheme={handleSelectTheme}
             />
           )}
         </div>
@@ -817,6 +859,14 @@ export default function App() {
       <AppsScriptModal
         isOpen={showAppsScriptModal}
         onClose={() => setShowAppsScriptModal(false)}
+      />
+
+      {/* Theme Selector Modal */}
+      <ThemeSelectorModal
+        isOpen={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+        currentTheme={currentTheme}
+        onSelectTheme={handleSelectTheme}
       />
     </div>
   );

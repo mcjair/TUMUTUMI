@@ -4,9 +4,31 @@
  */
 
 import React, { useState } from 'react';
-import { Sede, GoogleSheetRow } from '../types';
+import { Sede, GoogleSheetRow, AppTheme } from '../types';
 import { listUserSpreadsheets, GoogleDriveFile } from '../lib/googleSheets';
-import { Settings, Plus, RotateCcw, Save, Trash2, Eye, LayoutGrid, FileSpreadsheet, ExternalLink, Search } from 'lucide-react';
+import { THEMES } from '../lib/theme';
+import GoogleSheetConfigModal from './GoogleSheetConfigModal';
+import {
+  Settings,
+  Plus,
+  RotateCcw,
+  Save,
+  Trash2,
+  Eye,
+  LayoutGrid,
+  FileSpreadsheet,
+  ExternalLink,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  Edit3,
+  Palette,
+  Check
+} from 'lucide-react';
 
 interface SettingsPanelProps {
   sedes: Sede[];
@@ -15,6 +37,8 @@ interface SettingsPanelProps {
   onResetApp: () => void;
   googleToken?: string | null;
   onGoogleSignIn?: () => void;
+  currentTheme?: AppTheme;
+  onSelectTheme?: (theme: AppTheme) => void;
 }
 
 export default function SettingsPanel({
@@ -23,13 +47,16 @@ export default function SettingsPanel({
   onRefreshSedes,
   onResetApp,
   googleToken,
-  onGoogleSignIn
+  onGoogleSignIn,
+  currentTheme = 'emerald',
+  onSelectTheme
 }: SettingsPanelProps) {
   // Sede form state
   const [showAddForm, setShowAddForm] = useState(false);
-  const [driveFiles, setDriveFiles] = useState<GoogleDriveFile[]>([]);
-  const [loadingDrive, setLoadingDrive] = useState(false);
-  const [showDrivePicker, setShowDrivePicker] = useState(false);
+  const [editingSedeForSheet, setEditingSedeForSheet] = useState<Sede | null>(null);
+  const [testingSedeId, setTestingSedeId] = useState<string | null>(null);
+  const [sedeTestResults, setSedeTestResults] = useState<Record<string, { success: boolean; message: string; logs: string[] }>>({});
+
   const [newSede, setNewSede] = useState({
     name: '',
     ruc: '',
@@ -39,20 +66,49 @@ export default function SettingsPanel({
     token: ''
   });
 
-  const handleFetchDriveFiles = async () => {
-    if (!googleToken) {
-      if (onGoogleSignIn) onGoogleSignIn();
-      return;
-    }
-    setLoadingDrive(true);
-    setShowDrivePicker(true);
+  const handleTestSede = async (sede: Sede) => {
+    setTestingSedeId(sede.id);
     try {
-      const files = await listUserSpreadsheets(googleToken);
-      setDriveFiles(files);
-    } catch (e: any) {
-      alert(e.message || 'Error al conectar con Google Drive');
+      const response = await fetch(`/api/sedes/${sede.id}/test-connection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail: 'admin@tumisoft.com' })
+      });
+      const data = await response.json();
+      setSedeTestResults(prev => ({
+        ...prev,
+        [sede.id]: {
+          success: data.success || false,
+          message: data.message || 'Prueba finalizada',
+          logs: data.logs || []
+        }
+      }));
+    } catch (err: any) {
+      setSedeTestResults(prev => ({
+        ...prev,
+        [sede.id]: {
+          success: false,
+          message: err.message || 'Error al conectar con la sede',
+          logs: ['Error de red o servidor no disponible']
+        }
+      }));
     } finally {
-      setLoadingDrive(false);
+      setTestingSedeId(null);
+    }
+  };
+
+  const handleSaveSedeSheet = async (updatedFields: Partial<Sede>) => {
+    if (!editingSedeForSheet) return;
+    const response = await fetch(`/api/sedes/${editingSedeForSheet.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedFields)
+    });
+    if (response.ok) {
+      onRefreshSedes();
+      setEditingSedeForSheet(null);
+    } else {
+      throw new Error('No se pudo guardar la configuración de la sede');
     }
   };
 
@@ -98,7 +154,6 @@ export default function SettingsPanel({
 
   const handleRemoveSheetRow = (index: number) => {
     const updated = sheetRows.filter((_, i) => i !== index);
-    // Re-index row IDs
     const reindexed = updated.map((r, i) => ({ ...r, rowId: i + 1 }));
     setSheetRows(reindexed);
   };
@@ -145,31 +200,98 @@ export default function SettingsPanel({
   return (
     <div className="space-y-4" id="settings-panel-container">
       {/* Informational Multi-Branch Connectivity Badge */}
-      <div className="bg-slate-800 border border-slate-700 text-slate-200 rounded p-3 text-xs leading-relaxed">
-        <h4 className="font-bold text-white uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
-          <Settings className="w-3.5 h-3.5 text-indigo-400" />
-          Arquitectura Multi-Sucursal y Credenciales Independientes
+      <div className="bg-slate-800 border border-slate-700 text-slate-200 rounded-xl p-4 text-xs leading-relaxed shadow-sm">
+        <h4 className="font-bold text-white uppercase tracking-wider text-xs mb-1.5 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          Conectividad de Sedes: Tumisoft ERP & Google Sheets
         </h4>
         <p className="text-slate-300">
-          Este sistema gestiona conexiones seguras e independientes para cada sucursal. Para cada sede configurada, el sistema asocia de forma aislada:
+          Cada sede opera con su propia conexión a <strong>Tumisoft ERP</strong> (RUC 20612547131 - ZEYVER IMPORTACIONES S.A.C.) y a su archivo correspondiente de <strong>Google Sheets</strong>.
         </p>
-        <ul className="list-disc pl-4 mt-1.5 space-y-1 text-slate-400 text-[11px]">
-          <li><strong className="text-slate-300">Google Drive:</strong> Cada sucursal apunta a su propio archivo de <span className="text-emerald-400 font-mono">Google Sheet ID</span>.</li>
-          <li><strong className="text-slate-300">Tumisoft ERP:</strong> Cada sucursal se autentica con su propia firma digital (<span className="text-indigo-400 font-mono">API Token Privado</span>) y número de RUC.</li>
-        </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-3 pt-3 border-t border-slate-700/80 text-[11px]">
+          <div className="flex items-start gap-2 bg-slate-900/50 p-2.5 rounded-lg border border-slate-700/50">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <strong className="text-white block">1. Tumisoft ERP (En Vivo):</strong>
+              <span className="text-slate-400">Usuario 906255854 en admin.tumi-soft.com enlazado.</span>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 bg-slate-900/50 p-2.5 rounded-lg border border-slate-700/50">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <strong className="text-white block">2. Google Sheets por Sede:</strong>
+              <span className="text-slate-400">Haga clic en <em>"Elegir Google Sheet"</em> en cualquier sede para vincular su archivo de Drive o pegar su enlace.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Design & Theme Presets */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+          <div>
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Palette className="w-4 h-4 text-indigo-500" />
+              Opciones de Diseño Visual (Temas Disponibles)
+            </h4>
+            <p className="text-[11px] text-slate-400">Seleccione su estilo de interfaz preferido sin alterar datos ni lógica.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {Object.values(THEMES).map((t) => {
+            const isSelected = currentTheme === t.id;
+            return (
+              <div
+                key={t.id}
+                onClick={() => onSelectTheme && onSelectTheme(t.id)}
+                className={`p-3 rounded-xl border-2 transition-all cursor-pointer relative overflow-hidden bg-slate-50/60 ${
+                  isSelected
+                    ? 'border-indigo-600 ring-2 ring-indigo-200 shadow-sm bg-white'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs shrink-0"
+                      style={{ backgroundColor: t.colorHex }}
+                    />
+                    <span className="font-bold text-xs text-slate-800">{t.name.split(' ')[0]}</span>
+                  </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
+                    {t.badge}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-snug line-clamp-2">
+                  {t.description}
+                </p>
+                {isSelected && (
+                  <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
+                    <Check className="w-3 h-3" />
+                    <span>Seleccionado</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left Side: Sede Management */}
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-sm space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Settings className="w-4 h-4 text-indigo-500" />
-              Sedes Registradas en la Red
-            </h4>
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Settings className="w-4 h-4 text-indigo-500" />
+                Sedes y Conexiones Registradas
+              </h4>
+              <p className="text-[11px] text-slate-400">Gestione la vinculación de Google Sheets y pruebe la conexión en vivo de cada sede.</p>
+            </div>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-[11px] rounded flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-[11px] rounded-lg flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
             >
               <Plus className="w-3 h-3" />
               Añadir Sede
@@ -177,7 +299,7 @@ export default function SettingsPanel({
           </div>
 
           {showAddForm && (
-            <form onSubmit={handleCreateSede} className="p-3.5 bg-slate-50 border border-slate-200 rounded space-y-3 text-[11px]" id="add-sede-form">
+            <form onSubmit={handleCreateSede} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-[11px]" id="add-sede-form">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-500 mb-1 font-bold uppercase tracking-wider text-[9px]">Nombre de Sede / Sucursal</label>
@@ -198,7 +320,7 @@ export default function SettingsPanel({
                     value={newSede.ruc}
                     onChange={(e) => setNewSede({ ...newSede, ruc: e.target.value })}
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-xs"
-                    placeholder="20609876543"
+                    placeholder="20612547131"
                   />
                 </div>
               </div>
@@ -210,33 +332,20 @@ export default function SettingsPanel({
                   value={newSede.address}
                   onChange={(e) => setNewSede({ ...newSede, address: e.target.value })}
                   className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white text-xs"
-                  placeholder="Av. Bolognesi 450, Arequipa"
+                  placeholder="Av. Principal 123, Lima"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-500 font-bold uppercase tracking-wider text-[9px] flex items-center gap-1">
-                      <span className="text-emerald-600">●</span> Google Sheet ID (Drive)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleFetchDriveFiles}
-                      className="text-[9px] text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <Search className="w-2.5 h-2.5" />
-                      <span>Buscar en Drive</span>
-                    </button>
-                  </div>
+                  <label className="block text-slate-500 mb-1 font-bold uppercase tracking-wider text-[9px]">Google Sheet ID / URL</label>
                   <input
                     type="text"
                     value={newSede.googleSheetId}
                     onChange={(e) => setNewSede({ ...newSede, googleSheetId: e.target.value })}
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-xs"
-                    placeholder="ID del archivo de Google Drive"
+                    placeholder="ID o enlace de Google Sheet"
                   />
-                  <span className="text-[9px] text-slate-400 mt-0.5 block">Identificador de la hoja del local</span>
                 </div>
                 <div>
                   <label className="block text-slate-500 mb-1 font-bold uppercase tracking-wider text-[9px]">Rango Lectura</label>
@@ -247,22 +356,7 @@ export default function SettingsPanel({
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-xs"
                     placeholder="Ingreso!A2:H"
                   />
-                  <span className="text-[9px] text-slate-400 mt-0.5 block">Pestaña y rango de celdas</span>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-500 mb-1 font-bold uppercase tracking-wider text-[9px] flex items-center gap-1">
-                  <span className="text-indigo-600">●</span> Token de Acceso Tumisoft API (Sucursal)
-                </label>
-                <input
-                  type="password"
-                  value={newSede.token}
-                  onChange={(e) => setNewSede({ ...newSede, token: e.target.value })}
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-xs"
-                  placeholder="Cada sucursal puede tener su propio token API"
-                />
-                <span className="text-[9px] text-slate-400 mt-0.5 block">Credencial secreta de conexión a Tumisoft ERP para este RUC</span>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
@@ -283,31 +377,110 @@ export default function SettingsPanel({
             </form>
           )}
 
-          <div className="divide-y divide-slate-150 border border-slate-200 rounded">
-            {sedes.map((s) => (
-              <div key={s.id} className="p-3 flex items-center justify-between text-[11px] hover:bg-slate-50/50">
-                <div>
-                  <div className="font-bold text-slate-800">{s.name}</div>
-                  <div className="text-slate-400 font-mono mt-0.5">RUC: {s.ruc} | Sheet: {s.googleSheetId ? s.googleSheetId.substring(0, 15) + '...' : 'Inexistente'}</div>
-                  <div className="text-slate-400 font-mono mt-0.5">Tumisoft Token: <span className="text-indigo-600 font-semibold">{s.token ? '••••••••' : 'Mock-Default'}</span></div>
+          {/* Sede List with Direct Google Sheets and Connection Controls */}
+          <div className="space-y-3">
+            {sedes.map((s) => {
+              const testResult = sedeTestResults[s.id];
+              const isTesting = testingSedeId === s.id;
+              const isActive = activeSede?.id === s.id;
+
+              return (
+                <div
+                  key={s.id}
+                  className={`p-3.5 rounded-xl border transition-all ${
+                    isActive
+                      ? 'border-indigo-300 bg-indigo-50/30 ring-1 ring-indigo-200'
+                      : 'border-slate-200 bg-white hover:bg-slate-50/50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800 text-xs">{s.name}</span>
+                        {isActive && (
+                          <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-bold">
+                            Activa
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-500 font-mono text-[10px] mt-0.5">
+                        RUC: <strong className="text-slate-700">{s.ruc}</strong> | Entidad: <span className="text-emerald-700 font-semibold">{s.name}</span>
+                      </div>
+                      <div className="text-slate-500 text-[10px] flex items-center gap-1 mt-1">
+                        <FileSpreadsheet className="w-3 h-3 text-emerald-600 shrink-0" />
+                        <span className="font-semibold text-slate-700">Hoja vinculada:</span>
+                        <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded font-mono truncate max-w-[200px]">
+                          {s.googleSheetId || 'No asignada'}
+                        </code>
+                        <span className="text-slate-400">({s.googleSheetRange || 'Ingreso!A2:H'})</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setEditingSedeForSheet(s)}
+                        className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Elegir Google Sheet</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleTestSede(s)}
+                        disabled={isTesting}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <Activity className={`w-3 h-3 text-emerald-400 ${isTesting ? 'animate-spin' : ''}`} />
+                        <span>{isTesting ? 'Verificando...' : 'Probar Conexión'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Diagnostic Test Results Accordion / Box */}
+                  {testResult && (
+                    <div className={`mt-3 p-2.5 rounded-lg border text-[10px] font-mono space-y-1 ${
+                      testResult.success ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'
+                    }`}>
+                      <div className="font-bold flex items-center gap-1 text-[11px]">
+                        {testResult.success ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-600" />}
+                        <span>{testResult.message}</span>
+                      </div>
+                      <div className="space-y-0.5 pt-1 text-slate-600">
+                        {testResult.logs.map((log, lIdx) => (
+                          <div key={lIdx} className="leading-tight">{log}</div>
+                        ))}
+                      </div>
+
+                      {testResult.success && (
+                        <div className="pt-2 border-t border-emerald-200 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setEditingSedeForSheet(s)}
+                            className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold text-[10px] flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
+                          >
+                            <FileSpreadsheet className="w-3 h-3" />
+                            <span>Elegir Archivo en Drive & Validar Hoja</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[10px] font-bold">
-                  Activa (Simulada)
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="pt-3 border-t border-slate-200">
             <h5 className="text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-2">Zona de Restauración</h5>
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded flex items-center justify-between text-xs gap-4">
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center justify-between text-xs gap-4">
               <div>
                 <span className="font-bold text-slate-700 text-[11px]">Restaurar Base de Datos</span>
                 <p className="text-slate-400 mt-0.5 text-[10px]">Restablece todos los productos, trabajos de la cola, y registros de auditoría al estado inicial.</p>
               </div>
               <button
                 onClick={onResetApp}
-                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded flex items-center gap-1 transition-colors cursor-pointer text-xs"
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer text-xs"
                 id="factory-reset-btn"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -318,17 +491,20 @@ export default function SettingsPanel({
         </div>
 
         {/* Right Side: Virtual Google Sheets spreadsheet editor */}
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-sm space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-              <LayoutGrid className="w-4 h-4 text-emerald-500" />
-              Editor Virtual Google Sheets
-            </h4>
+            <div>
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <LayoutGrid className="w-4 h-4 text-emerald-500" />
+                Editor Virtual Google Sheets
+              </h4>
+              <p className="text-[11px] text-slate-400">Simulador de hoja para pruebas rápidas de validación e ingreso masivo.</p>
+            </div>
             <div className="flex gap-1.5">
               <button
                 onClick={fetchSheetForSimulator}
                 disabled={!activeSede}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-[11px] rounded flex items-center gap-1 transition-colors border border-slate-200 cursor-pointer"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-[11px] rounded-lg flex items-center gap-1 transition-colors border border-slate-200 cursor-pointer"
               >
                 <Eye className="w-3 h-3" />
                 Cargar Hoja
@@ -336,7 +512,7 @@ export default function SettingsPanel({
               <button
                 onClick={handleCommitSheetSimulator}
                 disabled={sheetRows.length === 0}
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] rounded flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] rounded-lg flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
                 id="save-virtual-sheet-btn"
               >
                 <Save className="w-3 h-3" />
@@ -345,176 +521,102 @@ export default function SettingsPanel({
             </div>
           </div>
 
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Utilice este editor para simular la adición o edición de registros en el Google Sheet de la sede activa. Puede añadir SKUs válidos o inválidos para observar cómo reacciona el motor de validación en tiempo real.
-          </p>
-
-          {sheetRows.length > 0 ? (
-            <div className="border border-slate-200 rounded overflow-hidden text-xs">
-              <div className="max-h-60 overflow-y-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[9px]">
-                      <th className="py-2 px-2 text-center w-10">Fila</th>
-                      <th className="py-2 px-2">SKU</th>
-                      <th className="py-2 px-2">Producto</th>
-                      <th className="py-2 px-2 text-right">Precio</th>
-                      <th className="py-2 px-2 text-right">Costo</th>
-                      <th className="py-2 px-2 text-center">Stock</th>
-                      <th className="py-2 px-2 text-center w-10"></th>
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="max-h-72 overflow-y-auto">
+              <table className="w-full text-left text-[11px]">
+                <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="p-2">#</th>
+                    <th className="p-2">SKU</th>
+                    <th className="p-2">Nombre</th>
+                    <th className="p-2">Precio</th>
+                    <th className="p-2">Stock</th>
+                    <th className="p-2 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-150">
+                  {sheetRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center text-slate-400">
+                        Haga clic en "Cargar Hoja" para editar filas de la sede activa.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {sheetRows.map((row, index) => (
-                      <tr key={index} className="hover:bg-slate-50/50">
-                        <td className="py-2 px-2 text-center font-mono text-slate-400">{row.rowId}</td>
-                        <td className="py-2 px-1">
+                  ) : (
+                    sheetRows.map((row, idx) => (
+                      <tr key={row.rowId} className="hover:bg-slate-50">
+                        <td className="p-2 font-mono text-slate-400">{row.rowId}</td>
+                        <td className="p-2 font-mono font-bold text-slate-700">
                           <input
                             type="text"
                             value={row.sku}
-                            onChange={(e) => handleSaveSheetRow(index, 'sku', e.target.value)}
-                            className="w-16 px-1 py-0.5 border border-slate-200 rounded font-mono text-[11px]"
+                            onChange={(e) => handleSaveSheetRow(idx, 'sku', e.target.value)}
+                            className="w-20 px-1 py-0.5 border border-slate-200 rounded bg-white text-[10px]"
                           />
                         </td>
-                        <td className="py-2 px-1">
+                        <td className="p-2">
                           <input
                             type="text"
                             value={row.nombre}
-                            onChange={(e) => handleSaveSheetRow(index, 'nombre', e.target.value)}
-                            className="w-full px-1 py-0.5 border border-slate-200 rounded text-[11px]"
+                            onChange={(e) => handleSaveSheetRow(idx, 'nombre', e.target.value)}
+                            className="w-full px-1 py-0.5 border border-slate-200 rounded bg-white text-[10px]"
                           />
                         </td>
-                        <td className="py-2 px-1 text-right">
+                        <td className="p-2">
                           <input
                             type="number"
-                            step="0.1"
                             value={row.precioVenta}
-                            onChange={(e) => handleSaveSheetRow(index, 'precioVenta', parseFloat(e.target.value) || 0)}
-                            className="w-12 px-1 py-0.5 border border-slate-200 rounded text-right text-[11px]"
+                            onChange={(e) => handleSaveSheetRow(idx, 'precioVenta', parseFloat(e.target.value) || 0)}
+                            className="w-16 px-1 py-0.5 border border-slate-200 rounded bg-white text-[10px]"
                           />
                         </td>
-                        <td className="py-2 px-1 text-right">
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={row.costo}
-                            onChange={(e) => handleSaveSheetRow(index, 'costo', parseFloat(e.target.value) || 0)}
-                            className="w-12 px-1 py-0.5 border border-slate-200 rounded text-right text-[11px]"
-                          />
-                        </td>
-                        <td className="py-2 px-1 text-center">
+                        <td className="p-2">
                           <input
                             type="number"
                             value={row.stock}
-                            onChange={(e) => handleSaveSheetRow(index, 'stock', parseInt(e.target.value) || 0)}
-                            className="w-10 px-1 py-0.5 border border-slate-200 rounded text-center text-[11px]"
+                            onChange={(e) => handleSaveSheetRow(idx, 'stock', parseInt(e.target.value, 10) || 0)}
+                            className="w-12 px-1 py-0.5 border border-slate-200 rounded bg-white text-[10px]"
                           />
                         </td>
-                        <td className="py-2 px-1 text-center">
+                        <td className="p-2 text-right">
                           <button
-                            onClick={() => handleRemoveSheetRow(index)}
-                            className="p-1 text-rose-500 hover:bg-rose-50 rounded cursor-pointer"
+                            type="button"
+                            onClick={() => handleRemoveSheetRow(idx)}
+                            className="text-rose-500 hover:text-rose-700 p-1 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="p-2 bg-slate-50 border-t border-slate-200 flex justify-end">
-                <button
-                  onClick={handleAddSheetRow}
-                  className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 rounded font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                  Agregar Fila
-                </button>
-              </div>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          ) : (
-            <div className="border border-dashed border-slate-300 rounded p-12 text-center text-slate-400 text-xs min-h-[220px] flex items-center justify-center">
-              Presione "Cargar Hoja" para cargar y editar los datos virtuales de la hoja de cálculo.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Google Drive Spreadsheet Picker Modal */}
-      {showDrivePicker && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-slate-200 rounded shadow-xl max-w-lg w-full flex flex-col max-h-[80vh] overflow-hidden text-xs">
-            <div className="p-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <h4 className="font-bold text-xs uppercase tracking-wider">
-                  Hojas de Cálculo en su Google Drive
-                </h4>
-              </div>
+            <div className="p-2 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
               <button
-                onClick={() => setShowDrivePicker(false)}
-                className="text-slate-400 hover:text-white p-1 rounded transition-colors cursor-pointer"
+                type="button"
+                onClick={handleAddSheetRow}
+                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer"
               >
-                ✕
+                <Plus className="w-3 h-3 text-emerald-600" />
+                <span>Agregar Fila</span>
               </button>
-            </div>
-
-            <div className="p-4 space-y-3 overflow-y-auto flex-1">
-              {loadingDrive ? (
-                <div className="text-center p-8 text-slate-500 text-xs space-y-2">
-                  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                  <p>Consultando sus archivos de Google Drive...</p>
-                </div>
-              ) : driveFiles.length === 0 ? (
-                <div className="text-center p-8 text-slate-400 text-xs">
-                  No se encontraron hojas de cálculo en su cuenta de Google Drive o necesita autorizar el acceso.
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] text-slate-500 mb-2">
-                    Haga clic en una hoja para asignarla automáticamente a la sucursal:
-                  </p>
-                  {driveFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      onClick={() => {
-                        setNewSede({ ...newSede, googleSheetId: file.id, name: newSede.name || file.name });
-                        setShowDrivePicker(false);
-                      }}
-                      className="p-2.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded cursor-pointer transition-colors flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <div className="truncate">
-                          <div className="font-semibold text-slate-800 text-xs truncate group-hover:text-indigo-900">
-                            {file.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono truncate">
-                            ID: {file.id}
-                          </div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] bg-white group-hover:bg-indigo-600 group-hover:text-white border border-slate-200 group-hover:border-transparent px-2 py-0.5 rounded font-bold text-slate-600 shrink-0 ml-2 transition-colors">
-                        Seleccionar
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <button
-                onClick={() => setShowDrivePicker(false)}
-                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded font-semibold text-xs cursor-pointer"
-              >
-                Cerrar
-              </button>
+              <span className="text-[10px] text-slate-400">{sheetRows.length} fila(s) cargadas</span>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Google Sheet Config Modal */}
+      {editingSedeForSheet && (
+        <GoogleSheetConfigModal
+          isOpen={!!editingSedeForSheet}
+          onClose={() => setEditingSedeForSheet(null)}
+          sede={editingSedeForSheet}
+          onSave={handleSaveSedeSheet}
+          googleToken={googleToken}
+          onGoogleSignIn={onGoogleSignIn}
+        />
       )}
     </div>
   );

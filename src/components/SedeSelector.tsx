@@ -5,7 +5,19 @@
 
 import { useState } from 'react';
 import { Sede } from '../types';
-import { ShieldCheck, CloudLightning, CheckCircle2, RotateCw, AlertTriangle, Building2, FileSpreadsheet } from 'lucide-react';
+import GoogleSheetConfigModal from './GoogleSheetConfigModal';
+import {
+  ShieldCheck,
+  CloudLightning,
+  CheckCircle2,
+  RotateCw,
+  AlertTriangle,
+  Building2,
+  FileSpreadsheet,
+  FolderOpen,
+  ArrowRight,
+  Sparkles
+} from 'lucide-react';
 
 interface SedeSelectorProps {
   sedes: Sede[];
@@ -16,6 +28,7 @@ interface SedeSelectorProps {
   googleUserEmail?: string | null;
   onGoogleSignIn?: () => void;
   onGoogleSignOut?: () => void;
+  onSedeUpdated?: () => void;
 }
 
 export default function SedeSelector({
@@ -26,10 +39,12 @@ export default function SedeSelector({
   googleToken,
   googleUserEmail,
   onGoogleSignIn,
-  onGoogleSignOut
+  onGoogleSignOut,
+  onSedeUpdated
 }: SedeSelectorProps) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; logs: string[] } | null>(null);
+  const [showDriveModal, setShowDriveModal] = useState(false);
 
   const handleTestConnection = async () => {
     if (!activeSede) return;
@@ -45,6 +60,7 @@ export default function SedeSelector({
       const data = await response.json();
       if (data.success) {
         setTestResult({ success: true, logs: data.logs });
+        // After verifying connection, prompt the user to choose the sheet
       } else {
         setTestResult({ success: false, logs: [data.error || 'Error desconocido al probar conexión'] });
       }
@@ -55,24 +71,46 @@ export default function SedeSelector({
     }
   };
 
+  const handleSaveSheetConfig = async (updatedFields: Partial<Sede>) => {
+    if (!activeSede) return;
+    const res = await fetch(`/api/sedes/${activeSede.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedFields)
+    });
+    if (res.ok) {
+      if (onSedeUpdated) onSedeUpdated();
+      setShowDriveModal(false);
+    } else {
+      throw new Error('Error al actualizar la configuración de la sede');
+    }
+  };
+
   return (
-    <div className="bg-white border border-slate-200 rounded p-4 shadow-sm" id="sede-selector-card">
+    <div className="bg-white border border-slate-200/80 rounded-xl p-4 sm:p-5 shadow-xs" id="sede-selector-card">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-slate-100 text-indigo-600 rounded">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 shadow-2xs">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sede de Trabajo Activa</h2>
-            <p className="text-[11px] text-slate-500">Seleccione la sucursal para sincronizar catálogo e ingresos</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Sede de Trabajo Activa</h2>
+              {activeSede && (
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                  En Línea
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500">Seleccione la sucursal para sincronizar catálogo, precios e ingresos</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Google Sheets Live Auth State */}
           {googleToken ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 text-[11px] font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] font-bold shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="truncate max-w-[130px]" title={googleUserEmail || ''}>
                 Google: {googleUserEmail?.split('@')[0] || 'Conectado'}
               </span>
@@ -90,7 +128,7 @@ export default function SedeSelector({
             onGoogleSignIn && (
               <button
                 onClick={onGoogleSignIn}
-                className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-[11px] font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-lg text-[11px] font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                 title="Conectar con Google Drive & Sheets"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 48 48">
@@ -110,7 +148,7 @@ export default function SedeSelector({
               const selected = sedes.find(s => s.id === e.target.value);
               if (selected) onSelectSede(selected);
             }}
-            className="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+            className="px-3 py-1.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-slate-800 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer shadow-2xs"
             id="sede-select-dropdown"
           >
             {sedes.map((s) => (
@@ -121,35 +159,48 @@ export default function SedeSelector({
           </select>
 
           {activeSede && (
-            <button
-              onClick={handleTestConnection}
-              disabled={testing}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
-              id="test-connection-btn"
-            >
-              {testing ? (
-                <RotateCw className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <CloudLightning className="w-3.5 h-3.5" />
-              )}
-              Probar Conexión
-            </button>
+            <>
+              <button
+                onClick={handleTestConnection}
+                disabled={testing}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                id="test-connection-btn"
+              >
+                {testing ? (
+                  <RotateCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                ) : (
+                  <CloudLightning className="w-3.5 h-3.5 text-emerald-400" />
+                )}
+                Probar Conexión
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDriveModal(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                title="Abrir Google Drive para elegir el archivo y validar la hoja de cálculo"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Explorar Drive & Hoja</span>
+              </button>
+            </>
           )}
         </div>
       </div>
 
       {activeSede && (
-        <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-slate-500">
-          <div>
-            <span className="font-semibold text-slate-700">RUC de Sede:</span> {activeSede.ruc}
+        <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-slate-600">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-slate-700">RUC:</span>
+            <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-semibold">{activeSede.ruc}</span>
           </div>
-          <div>
-            <span className="font-semibold text-slate-700">Dirección:</span> {activeSede.address}
+          <div className="truncate">
+            <span className="font-bold text-slate-700">Dirección:</span> {activeSede.address}
           </div>
-          <div>
-            <span className="font-semibold text-slate-700">Spreadsheet ID:</span>{' '}
-            <code className="bg-slate-50 px-1 py-0.5 rounded text-indigo-600 font-mono text-[10px] border border-slate-200">
-              {activeSede.googleSheetId.substring(0, 15)}...
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="font-bold text-slate-700">Google Sheet:</span>{' '}
+            <code className="bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-800 font-mono text-[10px] border border-emerald-200 truncate">
+              {activeSede.googleSheetId ? `${activeSede.googleSheetId.substring(0, 18)}...` : 'Sin asignar'}
             </code>
           </div>
         </div>
@@ -157,37 +208,65 @@ export default function SedeSelector({
 
       {/* Connection Diagnostic Logs */}
       {testResult && (
-        <div className="mt-3 p-3 rounded border text-xs bg-slate-900 border-slate-800 text-slate-300" id="diagnostic-log-container">
-          <div className="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5">
-            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
+        <div className="mt-3 p-3.5 rounded-xl border text-xs bg-slate-900 border-slate-800 text-slate-300 shadow-md animate-fadeIn" id="diagnostic-log-container">
+          <div className="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[11px]">
               {testResult.success ? (
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
               ) : (
                 <AlertTriangle className="w-4 h-4 text-rose-400" />
               )}
-              <span>Resultado del Diagnóstico Estructural</span>
+              <span className={testResult.success ? 'text-emerald-300' : 'text-rose-300'}>
+                Resultado del Diagnóstico: {testResult.success ? 'Conexión Exitosa' : 'Fallo en Conexión'}
+              </span>
             </div>
             <button
               onClick={() => setTestResult(null)}
-              className="text-[10px] text-slate-500 hover:text-slate-300 uppercase font-semibold"
+              className="text-[10px] text-slate-400 hover:text-white uppercase font-semibold cursor-pointer"
             >
               Cerrar
             </button>
           </div>
-          <div className="space-y-1 font-mono text-[10px] max-h-36 overflow-y-auto">
+
+          <div className="space-y-1 font-mono text-[10px] max-h-36 overflow-y-auto pr-1">
             {testResult.logs.map((log, index) => (
-              <div key={index} className="flex gap-1.5">
+              <div key={index} className="flex gap-1.5 items-start">
                 <span className="text-indigo-400 select-none">⚡</span>
                 <span>{log}</span>
               </div>
             ))}
           </div>
-          <div className="mt-2.5 flex justify-end">
-            <span className="text-[10px] text-slate-400 flex items-center gap-1 bg-slate-800/50 px-2 py-0.5 rounded">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Estado: Canal Operativo
-            </span>
-          </div>
+
+          {testResult.success && (
+            <div className="mt-3 pt-2.5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Tumisoft ERP & Google Sheets Operativos
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDriveModal(true)}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all animate-pulse"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Elegir Archivo en Drive & Validar Hoja</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Google Sheet & Drive Config Modal */}
+      {showDriveModal && activeSede && (
+        <GoogleSheetConfigModal
+          isOpen={showDriveModal}
+          onClose={() => setShowDriveModal(false)}
+          sede={activeSede}
+          onSave={handleSaveSheetConfig}
+          googleToken={googleToken}
+          onGoogleSignIn={onGoogleSignIn}
+        />
       )}
     </div>
   );

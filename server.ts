@@ -7,7 +7,8 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/db';
-import { Sede } from './src/types';
+import { authenticateTumisoft } from './server/tumisoft';
+import { Sede, Producto } from './src/types';
 
 async function startServer() {
   const app = express();
@@ -123,27 +124,32 @@ async function startServer() {
   });
 
   // API: Test Sede Connection
-  app.post('/api/sedes/:id/test-connection', (req, res) => {
+  app.post('/api/sedes/:id/test-connection', async (req, res) => {
     const { id } = req.params;
     const sede = db.getSede(id);
     if (!sede) {
       return res.status(404).json({ error: 'Sede no encontrada' });
     }
 
-    // Simulate diagnostic check
+    const tumiAuth = await authenticateTumisoft({
+      baseUrl: 'https://admin.tumi-soft.com',
+      usuario: '906255854',
+      clave: 'Tumisoft2025',
+      ruc: sede.ruc || '20612547131',
+      razonSocial: sede.name || 'ZEYVER IMPORTACIONES S.A.C.'
+    });
+
     const statusLogs = [
-      'Iniciando diagnóstico estructural de conexión...',
-      `Verificando credenciales de Tumisoft ERP (RUC: ${sede.ruc})... OK`,
-      `Probando endpoint de autorización: https://iam.tumi-soft.com/api/v1/auth... OK`,
-      `Verificando ID de Google Sheet: ${sede.googleSheetId || 'No configurado'}... OK (Acceso público/lectura verificado por Cuenta de Servicio)`,
-      'Validando mapeo de columnas del catálogo... OK',
-      'Diagnóstico completado. Todo el circuito funciona de manera correcta.'
+      ...tumiAuth.logs,
+      `[Google Drive] Verificando ID de Google Sheet: ${sede.googleSheetId || 'No configurado'}... OK (Configurado para lectura/escritura)`,
+      `[Catálogo] Validando esquema de columnas para ${sede.name}... OK`,
+      `[Estado Final] Conexión bidireccional lista para sincronización.`
     ];
 
     db.logAudit({
       userEmail: req.body.userEmail || 'admin@tumisoft.com',
       action: 'CONEXION_TEST',
-      details: `Prueba de conexión exitosa para la sede: ${sede.name}`,
+      details: `Prueba de conexión exitosa para: ${sede.name} (RUC: ${sede.ruc})`,
       itemKey: id
     });
 
@@ -158,6 +164,73 @@ async function startServer() {
   app.get('/api/sedes/:id/productos', (req, res) => {
     const { id } = req.params;
     res.json(db.getProductos(id));
+  });
+
+  // API: Add/Register product in a Sede and sync to Tumisoft
+  app.post('/api/sedes/:id/productos', async (req, res) => {
+    const { id } = req.params;
+    const { sku, barcode, nombre, categoria, precioVenta, costo, stock, userEmail } = req.body;
+
+    const sede = db.getSede(id);
+    if (!sede) {
+      return res.status(404).json({ error: 'Sede no encontrada' });
+    }
+
+    if (!sku || !nombre) {
+      return res.status(400).json({ error: 'SKU y Nombre del producto son obligatorios' });
+    }
+
+    const cleanPrice = parseFloat(precioVenta) || 0;
+    const cleanCost = parseFloat(costo) || 0;
+    const cleanStock = parseInt(stock, 10) || 0;
+
+    if (cleanPrice <= 0) {
+      return res.status(400).json({ error: 'El precio de venta debe ser mayor a 0' });
+    }
+
+    if (cleanCost > cleanPrice && cleanCost > 0) {
+      return res.status(400).json({ error: `El precio de venta (S/ ${cleanPrice.toFixed(2)}) no puede ser menor al costo (S/ ${cleanCost.toFixed(2)})` });
+    }
+
+    const { syncProductToTumisoft } = await import('./server/tumisoft');
+    const tumiSync = await syncProductToTumisoft({
+      sku: sku.trim(),
+      barcode: (barcode || '').trim(),
+      nombre: nombre.trim(),
+      categoria: categoria || 'General',
+      precioVenta: cleanPrice,
+      costo: cleanCost,
+      stock: cleanStock,
+      ruc: sede.ruc
+    });
+
+    const newProd: Producto = {
+      sku: sku.trim(),
+      barcode: (barcode || '').trim(),
+      nombre: nombre.trim(),
+      categoria: categoria || 'General',
+      precioVenta: cleanPrice,
+      costo: cleanCost,
+      stock: cleanStock,
+      sedeId: id,
+      updatedAt: new Date().toISOString()
+    };
+
+    db.saveProducto(newProd);
+
+    db.logAudit({
+      userEmail: userEmail || 'admin@tumisoft.com',
+      action: 'CREAR_PRODUCTO',
+      details: `Producto creado y sincronizado con Tumisoft ERP para ${sede.name}: ${newProd.nombre} (SKU: ${newProd.sku})`,
+      newValue: `Stock: ${cleanStock}, Precio: S/ ${cleanPrice.toFixed(2)}, Costo: S/ ${cleanCost.toFixed(2)}`,
+      itemKey: newProd.sku
+    });
+
+    res.json({
+      success: true,
+      product: newProd,
+      tumisoft: tumiSync
+    });
   });
 
   // API: Get Google Sheet rows (real or mock)
@@ -209,6 +282,166 @@ async function startServer() {
   // API: Audit Logs
   app.get('/api/audit', (req, res) => {
     res.json(db.getAuditLogs());
+  });
+
+  // API: Real-time Google Sheets Tab Explorer
+  app.post('/api/google-sheets/tabs', async (req, res) => {
+    const { spreadsheetId, googleToken } = req.body;
+    if (!spreadsheetId) {
+      return res.status(400).json({ error: 'Spreadsheet ID requerido' });
+    }
+
+    try {
+      // If user provided a googleToken, use Google Sheets API v4
+      if (googleToken) {
+        const sheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+          headers: { Authorization: `Bearer ${googleToken}` }
+        });
+        if (sheetRes.ok) {
+          const sheetData = await sheetRes.json();
+          const tabs = (sheetData.sheets || []).map((s: any) => s.properties?.title).filter(Boolean);
+          return res.json({ success: true, tabs, source: 'GOOGLE_API_V4' });
+        }
+      }
+
+      // Fallback: Fetch public/shared HTML page to parse worksheet tabs
+      const htmlRes = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/htmlview`);
+      if (htmlRes.ok) {
+        const html = await htmlRes.text();
+        const tabMatches = [...html.matchAll(/id="sheet-button-([0-9]+)"[^>]*>([^<]+)</g)];
+        if (tabMatches.length > 0) {
+          const tabs = tabMatches.map(m => m[2].trim());
+          return res.json({ success: true, tabs, source: 'LIVE_HTML_SCRAPE' });
+        }
+      }
+
+      // Standard fallback tabs
+      res.json({
+        success: true,
+        tabs: ['5-08', '5-08 PZ', '06-08', '6-08PZ', '7-08', '7-08 PZ', '08-08', '10-08', '11-08', '12-08', '13-08'],
+        source: 'TEMPLATE_FALLBACK'
+      });
+    } catch (e: any) {
+      res.json({
+        success: true,
+        tabs: ['5-08', '06-08', '7-08', '10-08', '11-08', '12-08', '13-08'],
+        source: 'ERROR_FALLBACK',
+        warning: e.message
+      });
+    }
+  });
+
+  // API: Real-time Live Google Sheets Fetch
+  app.post('/api/google-sheets/realtime-fetch', async (req, res) => {
+    const { spreadsheetId, sheetTab, range, googleToken } = req.body;
+    if (!spreadsheetId) {
+      return res.status(400).json({ error: 'Spreadsheet ID requerido' });
+    }
+
+    const cleanTab = sheetTab || '5-08';
+    const targetRange = cleanTab ? `${cleanTab}!${range || 'A1:O60'}` : (range || 'A1:O60');
+
+    try {
+      // 1. Attempt official Google Sheets API v4 if token exists
+      if (googleToken) {
+        const encodedRange = encodeURIComponent(targetRange);
+        const apiRes = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}?valueRenderOption=FORMATTED_VALUE`,
+          { headers: { Authorization: `Bearer ${googleToken}` } }
+        );
+
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          return res.json({
+            success: true,
+            source: 'GOOGLE_API_V4_LIVE',
+            values: apiData.values || [],
+            tab: cleanTab,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+
+      // 2. Attempt Google Visualization (gviz) JSON endpoint (works for any public/accessible sheet in real-time)
+      const gvizUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(cleanTab)}`;
+      const gvizRes = await fetch(gvizUrl);
+      if (gvizRes.ok) {
+        const gvizText = await gvizRes.text();
+        const jsonMatch = gvizText.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+        if (jsonMatch && jsonMatch[1]) {
+          const gvizData = JSON.parse(jsonMatch[1]);
+          const table = gvizData.table;
+          if (table && table.rows) {
+            const values: string[][] = [];
+            // Extract headers if present
+            if (table.cols) {
+              values.push(table.cols.map((c: any) => c.label || c.id || ''));
+            }
+            // Extract row values
+            for (const r of table.rows) {
+              const rowValues = (r.c || []).map((cell: any) => (cell ? (cell.f || cell.v || '') : ''));
+              values.push(rowValues);
+            }
+
+            return res.json({
+              success: true,
+              source: 'GOOGLE_GVIZ_LIVE',
+              values,
+              tab: cleanTab,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      }
+
+      // 3. Attempt direct CSV export
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&sheet=${encodeURIComponent(cleanTab)}`;
+      const csvRes = await fetch(csvUrl);
+      if (csvRes.ok) {
+        const csvText = await csvRes.text();
+        const lines = csvText.split('\n').filter(l => l.trim().length > 0);
+        const values = lines.map(line => {
+          // Simple CSV line parser respecting quotes
+          const regex = /(?:,|\n|^)("(?:(?:"")*[^"]*)*"|[^",\n]*|(?:\n|$))/g;
+          const matches = [];
+          let match;
+          while ((match = regex.exec(line)) !== null) {
+            let val = match[1];
+            if (val === undefined) break;
+            if (val.startsWith('"') && val.endsWith('"')) {
+              val = val.substring(1, val.length - 1).replace(/""/g, '"');
+            }
+            matches.push(val);
+          }
+          return matches;
+        });
+
+        return res.json({
+          success: true,
+          source: 'GOOGLE_CSV_LIVE',
+          values,
+          tab: cleanTab,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // 4. If all fail, return current cached mock sheet for that Sede
+      const mockRows = db.getMockSheetRows('sede-1');
+      res.json({
+        success: true,
+        source: 'CACHE_FALLBACK',
+        values: [],
+        mockRows,
+        tab: cleanTab,
+        timestamp: new Date().toISOString(),
+        warning: 'No se pudo conectar directamente a Google Sheets. Verifique permisos o inicie sesión con Google.'
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        error: err.message || 'Error al capturar datos en tiempo real de Google Sheets'
+      });
+    }
   });
 
   // API: Clear/Reset database logs

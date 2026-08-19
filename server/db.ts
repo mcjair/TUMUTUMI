@@ -28,22 +28,24 @@ const initialData: Schema = {
   sedes: [
     {
       id: 'sede-1',
-      name: 'Sede Lima Centro',
-      ruc: '20601234567',
-      address: 'Av. Garcilaso de la Vega 1250, Lima',
+      name: 'ZEYVER IMPORTACIONES S.A.C.',
+      ruc: '20612547131',
+      address: 'Lima Principal, Perú',
       googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo1',
-      googleSheetRange: 'Ingreso!A2:H',
+      googleSheetRange: '5-08!A1:O60',
       isActive: true,
+      token: 'Tumisoft2025:906255854',
       isMockEnabled: true
     },
     {
       id: 'sede-2',
-      name: 'Sede Miraflores',
-      ruc: '20601234568',
-      address: 'Calle Shell 345, Miraflores, Lima',
+      name: 'DULCES CHICHARRONES S.A.C.',
+      ruc: '20615378870',
+      address: 'Sede 2 / Almacén Central',
       googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo2',
-      googleSheetRange: 'Ingreso!A2:H',
+      googleSheetRange: '5-08!A1:O60',
       isActive: true,
+      token: 'Tumisoft2025:906255854',
       isMockEnabled: true
     }
   ],
@@ -71,16 +73,21 @@ const initialData: Schema = {
   ],
   mockSheets: {
     'sede-1': [
-      { rowId: 1, sku: 'TUMI-001', barcode: '775012340011', nombre: 'Teclado Mecánico RGB Red Switch', categoria: 'Accesorios PC', precioVenta: 195.00, costo: 95.00, stock: 20, status: 'REINGRESO' },
-      { rowId: 2, sku: 'TUMI-002', barcode: '775012340012', nombre: 'Mouse Gamer Óptico 16000 DPI', categoria: 'Accesorios PC', precioVenta: 124.50, costo: 60.00, stock: 15, status: 'REINGRESO' },
-      { rowId: 3, sku: 'TUMI-007', barcode: '775012340017', nombre: 'Pad Mouse Extra Large Gamer', categoria: 'Accesorios PC', precioVenta: 45.00, costo: 18.00, stock: 50, status: 'NUEVO' },
-      { rowId: 4, sku: 'TUMI-008', barcode: '775012340018', nombre: 'Soporte de Aluminio para Laptop', categoria: 'Accesorios PC', precioVenta: 89.90, costo: 40.00, stock: 30, status: 'NUEVO' },
-      { rowId: 5, sku: 'INVALID-SKU', barcode: '', nombre: 'Producto Inválido Sin Precio', categoria: 'Otros', precioVenta: 0, costo: 25.00, stock: 5, status: 'ERROR', errors: ['El precio debe ser mayor a 0', 'El código de barras no puede estar vacío'] }
+      { rowId: 1, sku: 'TUMI-101', barcode: '775012340101', nombre: 'KRIS GREEN X 24', categoria: 'CONFITERIA', precioVenta: 15.50, costo: 13.84, stock: 24, status: 'REINGRESO' },
+      { rowId: 2, sku: 'TUMI-102', barcode: '775012340102', nombre: 'MINI SAPITO', categoria: 'CONFITERIA', precioVenta: 12.80, costo: 11.59, stock: 64, status: 'REINGRESO' },
+      { rowId: 3, sku: 'TUMI-103', barcode: '775012340103', nombre: 'MINI CHOCO', categoria: 'CONFITERIA', precioVenta: 10.50, costo: 9.01, stock: 96, status: 'REINGRESO' },
+      { rowId: 4, sku: 'TUMI-104', barcode: '775012340104', nombre: 'FRUNA MISKY', categoria: 'CONFITERIA', precioVenta: 5.00, costo: 3.44, stock: 96, status: 'REINGRESO' },
+      { rowId: 5, sku: 'TUMI-105', barcode: '775012340105', nombre: 'HALLS EXTRA STRONG X 12', categoria: 'CONFITERIA', precioVenta: 14.20, costo: 13.48, stock: 6, status: 'REINGRESO' },
+      { rowId: 6, sku: 'TUMI-106', barcode: '775012340106', nombre: 'CHIPS AHOY X 6', categoria: 'CONFITERIA', precioVenta: 6.80, costo: 6.43, stock: 120, status: 'REINGRESO' },
+      { rowId: 7, sku: 'TUMI-107', barcode: '775012340107', nombre: 'DOÑA PEPA CAJA X 30', categoria: 'CONFITERIA', precioVenta: 27.50, costo: 24.10, stock: 30, status: 'REINGRESO' },
+      { rowId: 8, sku: 'TUMI-108', barcode: '775012340108', nombre: 'OREO ROLLO CLASICA', categoria: 'CONFITERIA', precioVenta: 2.50, costo: 2.29, stock: 150, status: 'REINGRESO' },
+      { rowId: 9, sku: 'TUMI-109', barcode: '775012340109', nombre: 'CUA CUA X 9', categoria: 'CONFITERIA', precioVenta: 7.20, costo: 6.62, stock: 120, status: 'REINGRESO' },
+      { rowId: 10, sku: 'TUMI-110', barcode: '775012340110', nombre: 'MINI GOMITAS FINI X 12', categoria: 'CONFITERIA', precioVenta: 4.90, costo: 4.33, stock: 480, status: 'NUEVO' }
     ],
     'sede-2': [
-      { rowId: 1, sku: 'TUMI-001', barcode: '775012340011', nombre: 'Teclado Mecánico RGB Red Switch', categoria: 'Accesorios PC', precioVenta: 189.90, costo: 95.00, stock: 10, status: 'REINGRESO' },
-      { rowId: 2, sku: 'TUMI-006', barcode: '775012340016', nombre: 'Silla Ergonómica Premium Plus', categoria: 'Muebles', precioVenta: 499.00, costo: 240.00, stock: 3, status: 'REINGRESO' },
-      { rowId: 3, sku: 'TUMI-009', barcode: '775012340019', nombre: 'Parlante Inteligente con Asistente', categoria: 'Audio', precioVenta: 199.00, costo: 85.00, stock: 12, status: 'NUEVO' }
+      { rowId: 1, sku: 'TUMI-101', barcode: '775012340101', nombre: 'KRIS GREEN X 24', categoria: 'CONFITERIA', precioVenta: 15.50, costo: 13.84, stock: 12, status: 'REINGRESO' },
+      { rowId: 2, sku: 'TUMI-105', barcode: '775012340105', nombre: 'HALLS EXTRA STRONG X 12', categoria: 'CONFITERIA', precioVenta: 14.20, costo: 13.48, stock: 10, status: 'REINGRESO' },
+      { rowId: 3, sku: 'TUMI-106', barcode: '775012340106', nombre: 'CHIPS AHOY X 6', categoria: 'CONFITERIA', precioVenta: 6.80, costo: 6.43, stock: 50, status: 'REINGRESO' }
     ]
   }
 };
@@ -306,16 +313,22 @@ async function processJobAsync(job: Job) {
       const updatedProduct: Producto = {
         sku,
         barcode: barcode || (originalProduct?.barcode || ''),
-        nombre: name || (originalProduct?.nombre || ''),
-        categoria: category || (originalProduct?.categoria || ''),
-        precioVenta: isNaN(price) || price === 0 ? (originalProduct?.precioVenta || 0) : price,
-        costo: isNaN(cost) || cost === 0 ? (originalProduct?.costo || 0) : cost,
-        stock: originalProduct ? (job.type === 'ENTRADA_INVENTARIO' ? originalProduct.stock + stock : originalProduct.stock) : stock,
+        nombre: (job.type === 'ACTUALIZAR_NOMBRE' && name) ? name : (name || originalProduct?.nombre || ''),
+        categoria: (job.type === 'ACTUALIZAR_CATEGORIA' && category) ? category : (category || originalProduct?.categoria || 'General'),
+        precioVenta: (job.type === 'ACTUALIZAR_PRECIO' || job.type === 'INGRESO_DIA' || job.type === 'INGRESO_DIARIO_SHEET') && price > 0 
+          ? price 
+          : (originalProduct?.precioVenta || price || 0),
+        costo: (job.type === 'ACTUALIZAR_COSTO' || job.type === 'INGRESO_DIA' || job.type === 'INGRESO_DIARIO_SHEET') && cost > 0 
+          ? cost 
+          : (originalProduct?.costo || cost || 0),
+        stock: job.type === 'ENTRADA_INVENTARIO' 
+          ? (originalProduct ? originalProduct.stock + stock : stock) 
+          : (stock > 0 ? stock : (originalProduct?.stock || 0)),
         sedeId: job.sedeId,
         updatedAt: new Date().toISOString()
       };
 
-      if (job.type === 'INGRESO_DIA') {
+      if (job.type === 'INGRESO_DIA' || job.type === 'INGRESO_DIARIO_SHEET') {
         details = `Sincronización de ingreso del día. SKU: ${sku}, Stock actual: ${updatedProduct.stock}, Precio: S/ ${updatedProduct.precioVenta}`;
         originalVal = originalProduct ? `Stock: ${originalProduct.stock}, Precio: S/ ${originalProduct.precioVenta}` : 'Producto Nuevo';
         newVal = `Stock: ${updatedProduct.stock}, Precio: S/ ${updatedProduct.precioVenta}`;

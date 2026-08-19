@@ -3,19 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
   User as FirebaseUser,
   signOut
 } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { auth } from './firebase';
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
+export { auth };
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/drive',
@@ -28,6 +25,9 @@ export const SCOPES = [
 const provider = new GoogleAuthProvider();
 SCOPES.forEach((scope) => {
   provider.addScope(scope);
+});
+provider.setCustomParameters({
+  prompt: 'consent select_account'
 });
 
 // Flag to indicate if we are in the middle of a sign-in flow.

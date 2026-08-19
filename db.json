@@ -1,0 +1,295 @@
+{
+  "users": [
+    {
+      "id": "usr-1",
+      "email": "admin@tumisoft.com",
+      "name": "Administrador Principal",
+      "role": "admin"
+    },
+    {
+      "id": "usr-2",
+      "email": "operador@tumisoft.com",
+      "name": "Operador de Sede",
+      "role": "operador"
+    },
+    {
+      "id": "usr-3",
+      "email": "pmagallanesp@gmail.com",
+      "name": "Administrador General",
+      "role": "admin"
+    }
+  ],
+  "sedes": [
+    {
+      "id": "sede-1",
+      "name": "ZEYVER IMPORTACIONES S.A.C.",
+      "ruc": "20612547131",
+      "address": "Lima Principal, Perú",
+      "googleSheetId": "1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo1",
+      "googleSheetRange": "5-08!A1:O60",
+      "isActive": true,
+      "token": "Tumisoft2025:906255854",
+      "isMockEnabled": true
+    },
+    {
+      "id": "sede-2",
+      "name": "DULCES CHICHARRONES S.A.C.",
+      "ruc": "20615378870",
+      "address": "Sede 2 / Almacén Central, Perú",
+      "googleSheetId": "1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo2",
+      "googleSheetRange": "5-08!A1:O60",
+      "isActive": true,
+      "token": "Tumisoft2025:906255854",
+      "isMockEnabled": true
+    }
+  ],
+  "productos": [
+    {
+      "sku": "TUMI-001",
+      "barcode": "775012340011",
+      "nombre": "Teclado Mecánico RGB Red Switch",
+      "categoria": "Accesorios PC",
+      "precioVenta": 189.9,
+      "costo": 95,
+      "stock": 45,
+      "sedeId": "sede-1",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-002",
+      "barcode": "775012340012",
+      "nombre": "Mouse Gamer Óptico 16000 DPI",
+      "categoria": "Accesorios PC",
+      "precioVenta": 124.5,
+      "costo": 58,
+      "stock": 60,
+      "sedeId": "sede-1",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-003",
+      "barcode": "775012340013",
+      "nombre": "Audífonos Inalámbricos Bluetooth Pro",
+      "categoria": "Audio",
+      "precioVenta": 249,
+      "costo": 110,
+      "stock": 30,
+      "sedeId": "sede-1",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-004",
+      "barcode": "775012340014",
+      "nombre": "Cámara Web Full HD 1080p c/ Micrófono",
+      "categoria": "Accesorios PC",
+      "precioVenta": 159,
+      "costo": 75,
+      "stock": 25,
+      "sedeId": "sede-1",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-005",
+      "barcode": "775012340015",
+      "nombre": "Monitor Curvo Gamer 27\" 144Hz",
+      "categoria": "Monitores",
+      "precioVenta": 899,
+      "costo": 520,
+      "stock": 15,
+      "sedeId": "sede-1",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-001",
+      "barcode": "775012340011",
+      "nombre": "Teclado Mecánico RGB Red Switch",
+      "categoria": "Accesorios PC",
+      "precioVenta": 189.9,
+      "costo": 95,
+      "stock": 12,
+      "sedeId": "sede-2",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-002",
+      "barcode": "775012340012",
+      "nombre": "Mouse Gamer Óptico 16000 DPI",
+      "categoria": "Accesorios PC",
+      "precioVenta": 129.9,
+      "costo": 58,
+      "stock": 24,
+      "sedeId": "sede-2",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-003",
+      "barcode": "775012340013",
+      "nombre": "Audífonos Inalámbricos Bluetooth Pro",
+      "categoria": "Audio",
+      "precioVenta": 249,
+      "costo": 110,
+      "stock": 8,
+      "sedeId": "sede-2",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    },
+    {
+      "sku": "TUMI-006",
+      "barcode": "775012340016",
+      "nombre": "Silla Ergonómica de Oficina Black",
+      "categoria": "Muebles",
+      "precioVenta": 450,
+      "costo": 220,
+      "stock": 5,
+      "sedeId": "sede-2",
+      "updatedAt": "2026-08-19T13:01:47.655Z"
+    }
+  ],
+  "jobs": [],
+  "auditLogs": [
+    {
+      "id": "aud-1",
+      "userEmail": "admin@tumisoft.com",
+      "action": "CONEXION_TEST",
+      "details": "Conexión exitosa verificada para Sede Lima Centro",
+      "timestamp": "2026-08-19T12:01:47.655Z"
+    },
+    {
+      "id": "aud-n0ihgv6fj",
+      "userEmail": "admin@tumisoft.com",
+      "action": "CONEXION_TEST",
+      "details": "Prueba de conexión exitosa para: ZEYVER IMPORTACIONES - Sede Principal (Lima) (RUC: 20612547131)",
+      "itemKey": "sede-1",
+      "timestamp": "2026-08-19T13:18:58.786Z"
+    },
+    {
+      "id": "aud-vv8ueshm5",
+      "userEmail": "admin@tumisoft.com",
+      "action": "CONEXION_TEST",
+      "details": "Prueba de conexión exitosa para: ZEYVER IMPORTACIONES - Sede Principal (Lima) (RUC: 20612547131)",
+      "itemKey": "sede-1",
+      "timestamp": "2026-08-19T13:50:50.864Z"
+    },
+    {
+      "id": "aud-5h34m925i",
+      "userEmail": "admin@tumisoft.com",
+      "action": "CONEXION_TEST",
+      "details": "Prueba de conexión exitosa para: ZEYVER IMPORTACIONES - Sede Principal (Lima) (RUC: 20612547131)",
+      "itemKey": "sede-1",
+      "timestamp": "2026-08-19T13:56:23.754Z"
+    },
+    {
+      "id": "aud-x1st7w0rf",
+      "userEmail": "admin@tumisoft.com",
+      "action": "MODIFICAR_SEDE",
+      "details": "Sede modificada: ZEYVER IMPORTACIONES - Sede Principal (Lima)",
+      "newValue": "{\"googleSheetId\":\"1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo1\",\"googleSheetRange\":\"11-08!A2:H\"}",
+      "timestamp": "2026-08-19T13:57:06.709Z"
+    },
+    {
+      "id": "aud-qsfg81woc",
+      "userEmail": "admin@tumisoft.com",
+      "action": "CONEXION_TEST",
+      "details": "Prueba de conexión exitosa para: ZEYVER IMPORTACIONES - Sede Principal (Lima) (RUC: 20612547131)",
+      "itemKey": "sede-1",
+      "timestamp": "2026-08-19T13:58:09.358Z"
+    }
+  ],
+  "mockSheets": {
+    "sede-1": [
+      {
+        "rowId": 1,
+        "sku": "TUMI-001",
+        "barcode": "775012340011",
+        "nombre": "Teclado Mecánico RGB Red Switch",
+        "categoria": "Accesorios PC",
+        "precioVenta": 195,
+        "costo": 95,
+        "stock": 20,
+        "status": "REINGRESO"
+      },
+      {
+        "rowId": 2,
+        "sku": "TUMI-002",
+        "barcode": "775012340012",
+        "nombre": "Mouse Gamer Óptico 16000 DPI",
+        "categoria": "Accesorios PC",
+        "precioVenta": 124.5,
+        "costo": 60,
+        "stock": 15,
+        "status": "REINGRESO"
+      },
+      {
+        "rowId": 3,
+        "sku": "TUMI-007",
+        "barcode": "775012340017",
+        "nombre": "Pad Mouse Extra Large Gamer",
+        "categoria": "Accesorios PC",
+        "precioVenta": 45,
+        "costo": 18,
+        "stock": 50,
+        "status": "NUEVO"
+      },
+      {
+        "rowId": 4,
+        "sku": "TUMI-008",
+        "barcode": "775012340018",
+        "nombre": "Soporte de Aluminio para Laptop",
+        "categoria": "Accesorios PC",
+        "precioVenta": 89.9,
+        "costo": 40,
+        "stock": 30,
+        "status": "NUEVO"
+      },
+      {
+        "rowId": 5,
+        "sku": "INVALID-SKU",
+        "barcode": "",
+        "nombre": "Producto Inválido Sin Precio",
+        "categoria": "Otros",
+        "precioVenta": 0,
+        "costo": 25,
+        "stock": 5,
+        "status": "ERROR",
+        "errors": [
+          "El precio debe ser mayor a 0",
+          "El código de barras no puede estar vacío"
+        ]
+      }
+    ],
+    "sede-2": [
+      {
+        "rowId": 1,
+        "sku": "TUMI-001",
+        "barcode": "775012340011",
+        "nombre": "Teclado Mecánico RGB Red Switch",
+        "categoria": "Accesorios PC",
+        "precioVenta": 189.9,
+        "costo": 95,
+        "stock": 10,
+        "status": "REINGRESO"
+      },
+      {
+        "rowId": 2,
+        "sku": "TUMI-006",
+        "barcode": "775012340016",
+        "nombre": "Silla Ergonómica Premium Plus",
+        "categoria": "Muebles",
+        "precioVenta": 499,
+        "costo": 240,
+        "stock": 3,
+        "status": "REINGRESO"
+      },
+      {
+        "rowId": 3,
+        "sku": "TUMI-009",
+        "barcode": "775012340019",
+        "nombre": "Parlante Inteligente con Asistente",
+        "categoria": "Audio",
+        "precioVenta": 199,
+        "costo": 85,
+        "stock": 12,
+        "status": "NUEVO"
+      }
+    ]
+  }
+}

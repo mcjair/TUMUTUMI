@@ -36,6 +36,7 @@ export interface Producto {
 
 export type JobType =
   | 'INGRESO_DIA'
+  | 'INGRESO_DIARIO_SHEET'
   | 'ACTUALIZAR_PRECIO'
   | 'ACTUALIZAR_CATEGORIA'
   | 'ACTUALIZAR_COSTO'
@@ -45,6 +46,8 @@ export type JobType =
   | 'SCRAPE_MAESTRO';
 
 export type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'ERROR';
+
+export type AppTheme = 'emerald' | 'midnight' | 'indigo' | 'warm';
 
 export interface Job {
   id: string;

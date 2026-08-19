@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Usuarios del sistema con roles administrativos o de operador",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "operador"] }
+      },
+      "required": ["id", "email", "name", "role"]
+    },
+    "Sede": {
+      "title": "Sede",
+      "description": "Sucursales de la empresa con conexiones independientes a Google Drive y Tumisoft ERP",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ruc": { "type": "string" },
+        "address": { "type": "string" },
+        "googleSheetId": { "type": "string" },
+        "googleSheetRange": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "token": { "type": "string" },
+        "isMockEnabled": { "type": "boolean" }
+      },
+      "required": ["id", "name", "ruc"]
+    },
+    "Producto": {
+      "title": "Producto",
+      "description": "Productos del catálogo maestro asociados a sedes",
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "nombre": { "type": "string" },
+        "categoria": { "type": "string" },
+        "precioVenta": { "type": "number" },
+        "costo": { "type": "number" },
+        "stock": { "type": "number" },
+        "sedeId": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["sku", "nombre", "precioVenta", "sedeId"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Trabajos asíncronos de sincronización y procesamiento",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "PROCESSING", "COMPLETED", "ERROR"] },
+        "sedeId": { "type": "string" },
+        "payload": { "type": "object" },
+        "totalRows": { "type": "number" },
+        "processedRows": { "type": "number" },
+        "logs": { "type": "array" },
+        "errorLogs": { "type": "array" },
+        "userEmail": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["id", "type", "status", "sedeId", "userEmail", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Registro inmutable de trazabilidad y auditoría de cambios",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "originalValue": { "type": "string" },
+        "newValue": { "type": "string" },
+        "itemKey": { "type": "string" }
+      },
+      "required": ["id", "userEmail", "action", "details", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Colección de perfiles de usuario"
+    },
+    "/sedes/{sedeId}": {
+      "schema": "Sede",
+      "description": "Colección de sucursales configuradas"
+    },
+    "/productos/{productoId}": {
+      "schema": "Producto",
+      "description": "Catálogo de productos de las sedes"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Cola de tareas de sincronización asíncronas"
+    },
+    "/auditLogs/{auditId}": {
+      "schema": "AuditLog",
+      "description": "Registros de auditoría histórica"
+    }
+  }
+}
