@@ -58,6 +58,7 @@ export default function App() {
   // Google OAuth state
   const [googleUser, setGoogleUser] = useState<FirebaseUser | null>(null);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [authDomainError, setAuthDomainError] = useState<string | null>(null);
 
   // App core state
   const [sedes, setSedes] = useState<Sede[]>([]);
@@ -98,9 +99,14 @@ export default function App() {
       const res = await googleSignIn();
       setGoogleUser(res.user);
       setGoogleToken(res.accessToken);
+      setAuthDomainError(null);
     } catch (e: any) {
       console.error('Google Sign In Error:', e);
-      alert(e.message || 'Error al iniciar sesión con Google');
+      if (e.code === 'auth/unauthorized-domain' || e.message?.includes('unauthorized-domain') || e.message?.includes('dominio')) {
+        setAuthDomainError(window.location.hostname);
+      } else {
+        alert(e.message || 'Error al iniciar sesión con Google');
+      }
     }
   };
 
@@ -868,6 +874,84 @@ export default function App() {
         currentTheme={currentTheme}
         onSelectTheme={handleSelectTheme}
       />
+
+      {/* Firebase Authorized Domain Helper Modal */}
+      {authDomainError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b border-amber-200 bg-amber-50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xs text-amber-950 uppercase tracking-wide">
+                    Dominio no autorizado en Firebase
+                  </h3>
+                  <p className="text-[11px] text-amber-800">
+                    Se requiere habilitar el dominio de despliegue en Google Firebase
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAuthDomainError(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-amber-100 cursor-pointer"
+              >
+                <XCircle className="w-5 h-5 text-amber-700" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs text-slate-600">
+              <p>
+                Tu aplicación está corriendo en <code className="px-1.5 py-0.5 bg-slate-100 font-mono font-bold text-slate-800 rounded">{authDomainError}</code>, pero Firebase Authentication requiere que este dominio esté registrado en la lista blanca de seguridad.
+              </p>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                <div className="text-[11px] font-bold text-slate-700 uppercase">Pasos para autorizarlo (30 segundos):</div>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-600 text-[11px]">
+                  <li>
+                    Ingresa a tu <strong className="text-slate-800">Firebase Console</strong>.
+                  </li>
+                  <li>
+                    Ve a <strong className="text-slate-800">Authentication &gt; Settings &gt; Authorized domains</strong>.
+                  </li>
+                  <li>
+                    Haz clic en <strong className="text-slate-800">&quot;Add domain&quot;</strong> y pega:
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={authDomainError}
+                        className="w-full px-2.5 py-1 font-mono text-xs bg-white border border-slate-300 rounded font-semibold text-slate-800 select-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(authDomainError);
+                          alert('¡Dominio copiado al portapapeles!');
+                        }}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white text-[11px] rounded font-medium cursor-pointer shrink-0"
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                  </li>
+                  <li>Haz clic en <strong className="text-slate-800">Guardar</strong> y vuelve a iniciar sesión.</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAuthDomainError(null)}
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-semibold cursor-pointer"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

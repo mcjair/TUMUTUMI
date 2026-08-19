@@ -76,7 +76,7 @@ async function startServer() {
 
   // API: Add Sede
   app.post('/api/sedes', (req, res) => {
-    const { name, ruc, address, googleSheetId, googleSheetRange, isActive, token, isMockEnabled } = req.body;
+    const { name, ruc, address, googleSheetId, googleSheetRange, isActive, token, usuario, clave, isMockEnabled } = req.body;
     
     if (!name || !ruc) {
       return res.status(400).json({ error: 'Nombre y RUC de la sede son obligatorios' });
@@ -90,6 +90,8 @@ async function startServer() {
       googleSheetId: googleSheetId || '',
       googleSheetRange: googleSheetRange || 'Ingreso!A2:H',
       isActive: isActive !== false,
+      usuario: usuario || (ruc === '20615378870' ? '933752943' : '906255854'),
+      clave: clave || (ruc === '20615378870' ? 'Tumisoft2026' : 'Tumisoft2025'),
       token: token || '',
       isMockEnabled: isMockEnabled !== false
     };
@@ -131,10 +133,13 @@ async function startServer() {
       return res.status(404).json({ error: 'Sede no encontrada' });
     }
 
+    const tumiUsuario = sede.usuario || (sede.ruc === '20615378870' ? '933752943' : '906255854');
+    const tumiClave = sede.clave || (sede.ruc === '20615378870' ? 'Tumisoft2026' : 'Tumisoft2025');
+
     const tumiAuth = await authenticateTumisoft({
       baseUrl: 'https://admin.tumi-soft.com',
-      usuario: '906255854',
-      clave: 'Tumisoft2025',
+      usuario: tumiUsuario,
+      clave: tumiClave,
       ruc: sede.ruc || '20612547131',
       razonSocial: sede.name || 'ZEYVER IMPORTACIONES S.A.C.'
     });
@@ -143,19 +148,19 @@ async function startServer() {
       ...tumiAuth.logs,
       `[Google Drive] Verificando ID de Google Sheet: ${sede.googleSheetId || 'No configurado'}... OK (Configurado para lectura/escritura)`,
       `[Catálogo] Validando esquema de columnas para ${sede.name}... OK`,
-      `[Estado Final] Conexión bidireccional lista para sincronización.`
+      `[Estado Final] Conexión bidireccional lista para sincronización con cuenta ${tumiUsuario}.`
     ];
 
     db.logAudit({
       userEmail: req.body.userEmail || 'admin@tumisoft.com',
       action: 'CONEXION_TEST',
-      details: `Prueba de conexión exitosa para: ${sede.name} (RUC: ${sede.ruc})`,
+      details: `Prueba de conexión exitosa para: ${sede.name} (RUC: ${sede.ruc}) con usuario ${tumiUsuario}`,
       itemKey: id
     });
 
     res.json({
       success: true,
-      message: `Conexión verificada con éxito para ${sede.name}`,
+      message: `Conexión verificada con éxito para ${sede.name} (Usuario: ${tumiUsuario})`,
       logs: statusLogs
     });
   });

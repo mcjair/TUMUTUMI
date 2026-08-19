@@ -34,6 +34,8 @@ const initialData: Schema = {
       googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo1',
       googleSheetRange: '5-08!A1:O60',
       isActive: true,
+      usuario: '906255854',
+      clave: 'Tumisoft2025',
       token: 'Tumisoft2025:906255854',
       isMockEnabled: true
     },
@@ -45,7 +47,9 @@ const initialData: Schema = {
       googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo2',
       googleSheetRange: '5-08!A1:O60',
       isActive: true,
-      token: 'Tumisoft2025:906255854',
+      usuario: '933752943',
+      clave: 'Tumisoft2026',
+      token: 'Tumisoft2026:933752943',
       isMockEnabled: true
     }
   ],

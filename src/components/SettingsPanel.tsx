@@ -406,6 +406,13 @@ export default function SettingsPanel({
                       <div className="text-slate-500 font-mono text-[10px] mt-0.5">
                         RUC: <strong className="text-slate-700">{s.ruc}</strong> | Entidad: <span className="text-emerald-700 font-semibold">{s.name}</span>
                       </div>
+                      <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <ShieldCheck className="w-3 h-3 text-indigo-500 shrink-0" />
+                        <span>Usuario Tumisoft:</span>
+                        <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1 py-0.5 rounded">
+                          {s.usuario || (s.ruc === '20615378870' ? '933752943' : '906255854')}
+                        </span>
+                      </div>
                       <div className="text-slate-500 text-[10px] flex items-center gap-1 mt-1">
                         <FileSpreadsheet className="w-3 h-3 text-emerald-600 shrink-0" />
                         <span className="font-semibold text-slate-700">Hoja vinculada:</span>

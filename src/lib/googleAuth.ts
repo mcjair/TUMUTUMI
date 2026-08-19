@@ -68,6 +68,15 @@ export const googleSignIn = async (): Promise<{ user: FirebaseUser; accessToken:
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Google Sign In Error:', error);
+    if (error?.code === 'auth/unauthorized-domain' || error?.message?.includes('auth/unauthorized-domain')) {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'tu-dominio.com';
+      const customError = new Error(
+        `El dominio "${currentHost}" no está autorizado en Firebase Authentication. Para solucionarlo:\n1. Abre Firebase Console.\n2. Ve a Authentication > Settings > Authorized domains.\n3. Añade "${currentHost}".`
+      );
+      (customError as any).code = 'auth/unauthorized-domain';
+      (customError as any).domain = currentHost;
+      throw customError;
+    }
     throw error;
   } finally {
     isSigningIn = false;

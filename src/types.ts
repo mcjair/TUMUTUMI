@@ -19,6 +19,8 @@ export interface Sede {
   googleSheetRange: string;
   isActive: boolean;
   token?: string;
+  usuario?: string;
+  clave?: string;
   isMockEnabled: boolean;
 }
 
