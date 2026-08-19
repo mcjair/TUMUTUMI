@@ -142,21 +142,55 @@ export default function SedeSelector({
             )
           )}
 
-          <select
-            value={activeSede?.id || ''}
-            onChange={(e) => {
-              const selected = sedes.find(s => s.id === e.target.value);
-              if (selected) onSelectSede(selected);
-            }}
-            className="px-3 py-1.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-slate-800 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer shadow-2xs"
-            id="sede-select-dropdown"
-          >
-            {sedes.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.ruc})
-              </option>
-            ))}
-          </select>
+          {/* Sede Selector Dropdown */}
+          <div className="relative min-w-[240px]">
+            <select
+              value={activeSede?.id || (sedes.length > 0 ? sedes[0].id : 'sede-1')}
+              onChange={(e) => {
+                const list = sedes.length > 0 ? sedes : [
+                  {
+                    id: 'sede-1',
+                    name: 'ZEYVER IMPORTACIONES S.A.C.',
+                    ruc: '20612547131',
+                    address: 'Lima Principal, Perú',
+                    googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo1',
+                    googleSheetRange: '5-08!A1:O60',
+                    isActive: true,
+                    usuario: '906255854',
+                    clave: 'Tumisoft2025',
+                    token: 'Tumisoft2025:906255854',
+                    isMockEnabled: true
+                  },
+                  {
+                    id: 'sede-2',
+                    name: 'DULCES CHICHARRONES S.A.C.',
+                    ruc: '20615378870',
+                    address: 'Sede 2 / Almacén Central, Perú',
+                    googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo2',
+                    googleSheetRange: '5-08!A1:O60',
+                    isActive: true,
+                    usuario: '933752943',
+                    clave: 'Tumisoft2026',
+                    token: 'Tumisoft2026:933752943',
+                    isMockEnabled: true
+                  }
+                ];
+                const selected = list.find(s => s.id === e.target.value);
+                if (selected) onSelectSede(selected);
+              }}
+              className="w-full px-3 py-1.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-slate-800 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer shadow-2xs"
+              id="sede-select-dropdown"
+            >
+              {(sedes.length > 0 ? sedes : [
+                { id: 'sede-1', name: 'ZEYVER IMPORTACIONES S.A.C.', ruc: '20612547131' },
+                { id: 'sede-2', name: 'DULCES CHICHARRONES S.A.C.', ruc: '20615378870' }
+              ]).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.ruc})
+                </option>
+              ))}
+            </select>
+          </div>
 
           {activeSede && (
             <>

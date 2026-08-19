@@ -38,10 +38,40 @@ import {
   Code,
   Palette,
   Sparkles,
-  Zap
+  Zap,
+  ExternalLink
 } from 'lucide-react';
 
 type TabType = 'ingreso' | 'masivo' | 'entrada' | 'catalogo' | 'jobs' | 'auditoria' | 'settings';
+
+export const DEFAULT_SEDES: Sede[] = [
+  {
+    id: 'sede-1',
+    name: 'ZEYVER IMPORTACIONES S.A.C.',
+    ruc: '20612547131',
+    address: 'Lima Principal, Perú',
+    googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo1',
+    googleSheetRange: '5-08!A1:O60',
+    isActive: true,
+    usuario: '906255854',
+    clave: 'Tumisoft2025',
+    token: 'Tumisoft2025:906255854',
+    isMockEnabled: true
+  },
+  {
+    id: 'sede-2',
+    name: 'DULCES CHICHARRONES S.A.C.',
+    ruc: '20615378870',
+    address: 'Sede 2 / Almacén Central, Perú',
+    googleSheetId: '1zHk7U3xYfK-b_pA8K9QWp99xXyZ77a_demo2',
+    googleSheetRange: '5-08!A1:O60',
+    isActive: true,
+    usuario: '933752943',
+    clave: 'Tumisoft2026',
+    token: 'Tumisoft2026:933752943',
+    isMockEnabled: true
+  }
+];
 
 export default function App() {
   // Authentication state
@@ -61,8 +91,8 @@ export default function App() {
   const [authDomainError, setAuthDomainError] = useState<string | null>(null);
 
   // App core state
-  const [sedes, setSedes] = useState<Sede[]>([]);
-  const [activeSede, setActiveSede] = useState<Sede | null>(null);
+  const [sedes, setSedes] = useState<Sede[]>(DEFAULT_SEDES);
+  const [activeSede, setActiveSede] = useState<Sede | null>(DEFAULT_SEDES[0]);
   const [activeTab, setActiveTab] = useState<TabType>('ingreso');
   const [updateSubtype, setUpdateSubtype] = useState<UpdateType>('PRECIO');
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -125,17 +155,24 @@ export default function App() {
     setLoadingSedes(true);
     try {
       const response = await fetch('/api/sedes');
-      const data = await response.json();
-      setSedes(data);
-      if (data.length > 0 && !activeSede) {
-        setActiveSede(data[0]);
-      } else if (activeSede) {
-        // Keep activeSede updated with any changes from settings
-        const updated = data.find((s: Sede) => s.id === activeSede.id);
-        if (updated) setActiveSede(updated);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setSedes(data);
+          if (!activeSede) {
+            setActiveSede(data[0]);
+          } else {
+            const updated = data.find((s: Sede) => s.id === activeSede.id);
+            if (updated) setActiveSede(updated);
+          }
+          return;
+        }
       }
+      setSedes(prev => (prev.length > 0 ? prev : DEFAULT_SEDES));
+      setActiveSede(prev => prev || DEFAULT_SEDES[0]);
     } catch (e) {
-      console.error(e);
+      setSedes(prev => (prev.length > 0 ? prev : DEFAULT_SEDES));
+      setActiveSede(prev => prev || DEFAULT_SEDES[0]);
     } finally {
       setLoadingSedes(false);
     }
@@ -910,13 +947,21 @@ export default function App() {
                 <div className="text-[11px] font-bold text-slate-700 uppercase">Pasos para autorizarlo (30 segundos):</div>
                 <ol className="list-decimal list-inside space-y-1.5 text-slate-600 text-[11px]">
                   <li>
-                    Ingresa a tu <strong className="text-slate-800">Firebase Console</strong>.
+                    Abre tu <a
+                      href="https://console.firebase.google.com/project/gen-lang-client-0561903979/authentication/settings"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 font-bold underline inline-flex items-center gap-1"
+                    >
+                      Consola de Firebase (clic aquí para abrir directo)
+                      <ExternalLink className="w-3 h-3" />
+                    </a>.
                   </li>
                   <li>
-                    Ve a <strong className="text-slate-800">Authentication &gt; Settings &gt; Authorized domains</strong>.
+                    En la pestaña <strong className="text-slate-800">Settings / Configuración</strong>, ubica la sección <strong className="text-slate-800">Authorized domains (Dominios autorizados)</strong>.
                   </li>
                   <li>
-                    Haz clic en <strong className="text-slate-800">&quot;Add domain&quot;</strong> y pega:
+                    Haz clic en <strong className="text-slate-800">&quot;Add domain&quot; (Agregar dominio)</strong> y pega:
                     <div className="mt-1 flex items-center gap-2">
                       <input
                         readOnly
@@ -935,7 +980,7 @@ export default function App() {
                       </button>
                     </div>
                   </li>
-                  <li>Haz clic en <strong className="text-slate-800">Guardar</strong> y vuelve a iniciar sesión.</li>
+                  <li>Haz clic en <strong className="text-slate-800">Guardar / Add</strong> y luego recarga esta página para iniciar sesión.</li>
                 </ol>
               </div>
 
